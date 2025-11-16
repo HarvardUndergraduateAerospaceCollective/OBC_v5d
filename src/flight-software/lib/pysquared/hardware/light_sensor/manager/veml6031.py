@@ -7,7 +7,9 @@ Based on:
 https://github.com/n8many/VEML6030py/blob/master/veml6030.py
 """
 
+from busio import I2C
 from enum import IntEnum, IntFlag
+from adafruit_tca9548a import TCA9548A_Channel
 
 # done: VEML6031X00
 ADDRESS = [0x29, 0x10]
@@ -218,7 +220,7 @@ class VEML6031(object):
         # Make sure the bus input is valid
         if bus is None:
             raise ValueError("Invalid bus, must pass in SMBus object")
-        self.bus = bus
+        self.bus : I2C | TCA9548A_Channel = bus
 
         # Initialize sensor with default values
         self.power_on()
@@ -286,15 +288,13 @@ class VEML6031(object):
         The current value will be saved for reading.
         No further readings will be taken until "power_on" is called.
         """
-        self._write_bits_to_register(SETTING_CONF_0, True, 0)
-        self._write_bits_to_register(SETTING_CONF_1, True, 0)
+        self.write_both_conf_registers(True)
     
     def power_on(self):
         """
         Powers on VEML6030 from off
         """
-        self._write_bits_to_register(SETTING_CONF_0, False, 0)
-        self._write_bits_to_register(SETTING_CONF_1, False, 0)
+        self.write_both_conf_registers(False)
 
     def read_light(self, compensate=True):
         """
@@ -326,7 +326,6 @@ class VEML6031(object):
         :rtype: float
         """
         # TODO: Create reverse lux compensation
-
         return (0.00000000000060135 * lux**4
                 - 0.0000000093924 * lux**3
                 + 0.000081488 * lux**2
@@ -388,7 +387,13 @@ class VEML6031(object):
         :return: Word in register
         :rtype: int
         """
-        return self.bus.read_word_data(self.address, register)
+        # original: read_word_data, so 2 bytes
+        result = bytearray(2)
+        # Convert the bytearray to a 16-bit integer (little-endian)
+        # VEML6031 uses little-endian byte order (LSB first)
+        self.bus.readfrom_into(register, result)
+        value = result[0] | (result[1] << 8)
+        return value
 
     def _write_register(self, register, value):
         """
@@ -399,4 +404,37 @@ class VEML6031(object):
         :param value: Word to write to register
         :type value: int
         """
-        self.bus.write_word_data(self.address, register, value)
+        self.bus.writeto(register, value)
+
+    def write_both_conf_registers(self, shutdown_bit):
+        """
+        Write to both configuration registers (CONF_0 and CONF_1) together
+        as required by the datasheet.
+        
+        :param shutdown_bit: Boolean value for the shutdown bit in both registers
+        :type shutdown_bit: bool
+        """
+        # Read current values first to preserve other settings
+        current_conf0 = self._read_register(SETTING_CONF_0)
+        current_conf1 = self._read_register(SETTING_CONF_1)
+        
+        # Update shutdown bit (bit 0) in both registers
+        if shutdown_bit:
+            new_conf0 = current_conf0 | 0x0001  # Set bit 0
+            new_conf1 = current_conf1 | 0x0001  # Set bit 0
+        else:
+            new_conf0 = current_conf0 & 0xFFFE  # Clear bit 0
+            new_conf1 = current_conf1 & 0xFFFE  # Clear bit 0
+        
+        # Lock the bus to perform both writes in rapid succession
+        self.bus.try_lock()
+        try:
+            # Write to CONF_0 register (0x00)
+            # Format: [register address, LSB, MSB]
+            data0 = bytearray([SETTING_CONF_0, new_conf0 & 0xFF, (new_conf0 >> 8) & 0xFF])
+            self.bus.writeto(self.address, data0)
+            # Write to CONF_1 register (0x01) immediately after
+            data1 = bytearray([SETTING_CONF_1, new_conf1 & 0xFF, (new_conf1 >> 8) & 0xFF])
+            self.bus.writeto(self.address, data1)
+        finally:
+            self.bus.unlock()

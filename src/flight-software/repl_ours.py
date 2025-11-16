@@ -16,7 +16,7 @@ from lib.pysquared.hardware.burnwire.manager.burnwire import BurnwireManager
 from lib.pysquared.hardware.busio import _spi_init, initialize_i2c_bus
 from lib.pysquared.hardware.digitalio import initialize_pin
 from lib.pysquared.hardware.imu.manager.lsm6dsox import LSM6DSOXManager
-from lib.pysquared.hardware.light_sensor.manager.veml7700 import VEML7700Manager
+from lib.pysquared.hardware.light_sensor.manager.veml6031_manager import VEML6031Manager
 from lib.pysquared.hardware.load_switch.manager.loadswitch_manager import (
     LoadSwitchManager,
 )
@@ -180,6 +180,39 @@ RX0_OUTPUT = initialize_pin(logger, board.RX0, digitalio.Direction.OUTPUT, False
 RX1_OUTPUT = initialize_pin(logger, board.RX1, digitalio.Direction.OUTPUT, False)
 TX0_OUTPUT = initialize_pin(logger, board.TX0, digitalio.Direction.OUTPUT, False)
 TX1_OUTPUT = initialize_pin(logger, board.TX1, digitalio.Direction.OUTPUT, False)
+tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
+light_sensors = []
+try:
+    sensor = VEML6031Manager(logger, tca[0])
+    light_sensors.append(sensor)
+except Exception:
+    logger.debug("WARNING!!! Light sensor 0 failed to initialize")
+    light_sensors.append(None)
+try:
+    sensor = VEML6031Manager(logger, tca[1])
+    light_sensors.append(sensor)
+except Exception:
+    logger.debug("WARNING!!! Light sensor 1 failed to initialize")
+    light_sensors.append(None)
+try:
+    sensor = VEML6031Manager(logger, tca[2])
+    light_sensors.append(sensor)
+except Exception:
+    logger.debug("WARNING!!! Light sensor 2 failed to initialize")
+    light_sensors.append(None)
+try:
+    sensor = VEML6031Manager(logger, tca[3])
+    light_sensors.append(sensor)
+except Exception:
+    logger.debug("WARNING!!! Light sensor 3 failed to initialize")
+    light_sensors.append(None)
+try:
+    sensor = VEML6031Manager(logger, tca[5])
+    light_sensors.append(sensor)
+except Exception:
+    logger.debug("WARNING!!! Light sensor 4 failed to initialize")
+    light_sensors.append(None)
+
 
 # CDH
 cdh = ExtendedCommandDataHandler(logger, config, uhf_packet_manager, jokes_config)
