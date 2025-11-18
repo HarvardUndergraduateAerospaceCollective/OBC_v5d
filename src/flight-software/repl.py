@@ -16,7 +16,7 @@ from lib.pysquared.hardware.burnwire.manager.burnwire import BurnwireManager
 from lib.pysquared.hardware.busio import _spi_init, initialize_i2c_bus
 from lib.pysquared.hardware.digitalio import initialize_pin
 from lib.pysquared.hardware.imu.manager.lsm6dsox import LSM6DSOXManager
-from lib.pysquared.hardware.light_sensor.manager.veml6031_manager import VEML6031Manager
+from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00Manager
 from lib.pysquared.hardware.load_switch.manager.loadswitch_manager import (
     LoadSwitchManager,
 )
@@ -183,31 +183,31 @@ TX1_OUTPUT = initialize_pin(logger, board.TX1, digitalio.Direction.OUTPUT, False
 tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
 light_sensors = []
 try:
-    sensor = VEML6031Manager(logger, tca[0])
+    sensor = VEML6031x00Manager(logger, tca[0])
     light_sensors.append(sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 0 failed to initialize")
     light_sensors.append(None)
 try:
-    sensor = VEML6031Manager(logger, tca[1])
+    sensor = VEML6031x00Manager(logger, tca[1])
     light_sensors.append(sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 1 failed to initialize")
     light_sensors.append(None)
 try:
-    sensor = VEML6031Manager(logger, tca[2])
+    sensor = VEML6031x00Manager(logger, tca[2])
     light_sensors.append(sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 2 failed to initialize")
     light_sensors.append(None)
 try:
-    sensor = VEML6031Manager(logger, tca[3])
+    sensor = VEML6031x00Manager(logger, tca[3])
     light_sensors.append(sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 3 failed to initialize")
     light_sensors.append(None)
 try:
-    sensor = VEML6031Manager(logger, tca[5])
+    sensor = VEML6031x00Manager(logger, tca[5])
     light_sensors.append(sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 4 failed to initialize")
