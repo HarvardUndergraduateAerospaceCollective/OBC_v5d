@@ -328,6 +328,19 @@ class VEML6031x00Manager(LightSensorProto):
         self._ir_counts = ir_counts
         self._als_lux = als_counts * res
 
+    def _acquire_i2c_lock(self) -> None:
+        """Acquire I2C bus lock with retry logic.
+
+        Raises:
+            RuntimeError: If unable to lock the I2C bus after 200 attempts.
+        """
+        tries = 0
+        while not self._i2c.try_lock():
+            if tries >= 200:
+                raise RuntimeError("Unable to lock I2C bus")
+            tries += 1
+            time.sleep(0)
+
     def _write16(self, reg: int, value: int) -> None:
         """Write a 16-bit little-endian value to a register."""
         # value is 16-bit little-endian
@@ -335,9 +348,11 @@ class VEML6031x00Manager(LightSensorProto):
         buf[0] = reg & 0xFF
         buf[1] = value & 0xFF
         buf[2] = (value >> 8) & 0xFF
-        self._i2c.try_lock()
-        self._i2c.writeto(self._addr, buf)
-        self._i2c.unlock()
+        self._acquire_i2c_lock()
+        try:
+            self._i2c.writeto(self._addr, buf)
+        finally:
+            self._i2c.unlock()
 
     def _read16(self, reg: int) -> int:
         """Read a 16-bit little-endian value from a register."""
@@ -345,15 +360,15 @@ class VEML6031x00Manager(LightSensorProto):
         out_buf[0] = reg & 0xFF
         in_buf = bytearray(2)
         # Prefer repeated start if available
+        self._acquire_i2c_lock()
         try:
-            self._i2c.try_lock()
-            self._i2c.writeto_then_readfrom(self._addr, out_buf, in_buf)
-            self._i2c.unlock()
-        except AttributeError:
-            # Fallback: separate ops
-            self._i2c.try_lock()
-            self._i2c.writeto(self._addr, out_buf)
-            self._i2c.readfrom_into(self._addr, in_buf)
+            try:
+                self._i2c.writeto_then_readfrom(self._addr, out_buf, in_buf)
+            except AttributeError:
+                # Fallback: separate ops
+                self._i2c.writeto(self._addr, out_buf)
+                self._i2c.readfrom_into(self._addr, in_buf)
+        finally:
             self._i2c.unlock()
         return in_buf[0] | (in_buf[1] << 8)
 
@@ -362,13 +377,13 @@ class VEML6031x00Manager(LightSensorProto):
         out_buf = bytearray(1)
         out_buf[0] = reg & 0xFF
         in_buf = bytearray(1)
+        self._acquire_i2c_lock()
         try:
-            self._i2c.try_lock()
-            self._i2c.writeto_then_readfrom(self._addr, out_buf, in_buf)
-            self._i2c.unlock()
-        except AttributeError:
-            self._i2c.try_lock()
-            self._i2c.writeto(self._addr, out_buf)
-            self._i2c.readfrom_into(self._addr, in_buf)
+            try:
+                self._i2c.writeto_then_readfrom(self._addr, out_buf, in_buf)
+            except AttributeError:
+                self._i2c.writeto(self._addr, out_buf)
+                self._i2c.readfrom_into(self._addr, in_buf)
+        finally:
             self._i2c.unlock()
         return in_buf[0]
