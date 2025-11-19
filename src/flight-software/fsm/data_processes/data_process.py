@@ -14,9 +14,9 @@ class DataProcess():
     """
 
     def __init__(self, magnetometer, imu, battery_power_monitor):
-        self.protos_power_monitor = battery_power_monitor
-        self.protos_imu = imu
-        self.protos_magnetometer = magnetometer
+        self.protos_power_monitor = battery_power_monitor   # INA219Manager
+        self.protos_imu = imu                               # LSM6DSOXManager                
+        self.protos_magnetometer = magnetometer             # LIS2MDLManager
         self.last_imu_time = time.monotonic()
         self.running = True
         self.data = {

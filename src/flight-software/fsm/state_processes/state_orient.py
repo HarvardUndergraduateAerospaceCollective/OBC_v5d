@@ -5,7 +5,7 @@
 import math
 import asyncio
 from lib.pysquared.sensor_reading.light import Light
-from lib.pysquared.hardware.light_sensor.manager.veml7700 import VEML7700Manager
+from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00Manager
 
 # ++++++++++++++ Functions: Helper ++++++++++++++ #
 class StateOrient:
@@ -31,19 +31,19 @@ class StateOrient:
         self.face3_sensor = None
 
         try:
-            self.face0_sensor = VEML7700Manager(logger, tca[0])
+            self.face0_sensor = VEML6031x00Manager(logger, tca[0])
         except Exception:
             self.logger.debug("[WARNING] Light sensor 0 failed to initialize")
         try:
-            self.face1_sensor = VEML7700Manager(logger, tca[1])
+            self.face1_sensor = VEML6031x00Manager(logger, tca[1])
         except Exception:
             self.logger.debug("[WARNING] Light sensor 1 failed to initialize")
         try:
-            self.face2_sensor = VEML7700Manager(logger, tca[2])
+            self.face2_sensor = VEML6031x00Manager(logger, tca[2])
         except Exception:
             self.logger.debug("[WARNING] Light sensor 2 failed to initialize")
         try:
-            self.face3_sensor = VEML7700Manager(logger, tca[3])
+            self.face3_sensor = VEML6031x00Manager(logger, tca[3])
         except Exception:
             self.logger.debug("[WARNING] Light sensor 3 failed to initialize")
 

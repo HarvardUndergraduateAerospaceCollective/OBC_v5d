@@ -175,7 +175,6 @@ beacon = Beacon(
 )
 
 # Light Sensors
-tca = TCA9548A(i2c0, address=int(0x77))
 RX0_OUTPUT = initialize_pin(logger, board.RX0, digitalio.Direction.OUTPUT, False)
 RX1_OUTPUT = initialize_pin(logger, board.RX1, digitalio.Direction.OUTPUT, False)
 TX0_OUTPUT = initialize_pin(logger, board.TX0, digitalio.Direction.OUTPUT, False)
@@ -752,5 +751,5 @@ def test_all():
     #asyncio.run(test_dm_obj_get_data_updates())      # TESTED
     #asyncio.run(test_dm_obj_magnetometer())          # TESTED
     #asyncio.run(test_dm_obj_imu())                   # TESTED
-    #asyncio.run(test_dm_obj_battery())               # TESTED
+    asyncio.run(test_dm_obj_battery())               # TESTED
     pass
