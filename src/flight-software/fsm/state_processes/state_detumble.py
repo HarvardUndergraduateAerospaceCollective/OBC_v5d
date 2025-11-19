@@ -21,7 +21,7 @@ class StateDetumble:
         self.done = False
         self.detumble_frequency = 5 # in seconds; how long to wait between data reads
         self.detumble_threshold = 0.05
-        self.max_time = 300         # 5 minutes to try and stabilize
+        self.max_time = 5400        # 90 minutes (~1 orbit) to try and stabilize
         self.start_time = None
         self.magnetorquer_manager = None
         """
