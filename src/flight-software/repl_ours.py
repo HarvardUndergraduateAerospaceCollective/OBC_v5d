@@ -215,6 +215,10 @@ except Exception:
     light_sensors.append(None)
 
 # Magnetorquer Initializations
+"""
+In main.py no need to instantiate these, these will be used by State Detumble
+We're instantiating here to test it can be instantiated.
+"""
 detumbler_manager = DetumblerManager(gain=1.0)
 """
 # Don't do until plugged in
@@ -226,8 +230,6 @@ magnetorquer_manager = MagnetorquerManager( logger=logger,
                                             addr_y_minus    =tca[3],
                                             addr_z_minus    =tca[4])
 """
-
-
 
 # CDH
 cdh = ExtendedCommandDataHandler(logger, config, uhf_packet_manager, jokes_config)
@@ -537,6 +539,37 @@ async def test_fsm_emergency_detumble():
         fsm_obj.curr_state_run_asyncio_task.cancel()
     print("\033[92mPASSED\033[0m [test_fsm_emergency_detumble]")
 
+async def test_fsm_detumble_max_duration():
+    """
+    Test that the FSM stops detumble if it exceeds max duration
+    """
+    dm_obj = DataProcess(magnetometer=magnetometer,
+                        imu=imu,
+                        battery_power_monitor=battery_power_monitor)
+    fsm_obj = FSM(dm_obj,
+            logger,
+            config,
+            deployment_switch=antenna_deployment,
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+    beacon_fsm.fsm_obj = fsm_obj
+    
+    # Set these parameters artificially so that it won't ever switch to deploy prematurely
+    fsm_obj.dp_obj.data["data_batt_volt"] = 7
+    fsm_obj.dp_obj.data["data_imu_av_magnitude"] = 0.5
+    fsm_obj.set_state("detumble")
+
+    # Simulate bootup for a little bit (lower than what it is supposed to be, i.e > 5 seconds)
+    await asyncio.sleep(6)
+    fsm_obj.execute_fsm_step()
+
+    # FSM should have switched
+    assert fsm_obj.curr_state_name == "deploy", "\033[91mFAILED\033[0m [test_fsm_detumble_max_duration: stayed in detumble]"
+    # Clean up asyncio task if created
+    if fsm_obj.curr_state_run_asyncio_task is not None:
+        fsm_obj.curr_state_object.stop()
+        fsm_obj.curr_state_run_asyncio_task.cancel()
+    print("\033[92mPASSED\033[0m [test_fsm_emergency_detumble]")
+
 async def test_fsm_detumble_stop_conditions():
     """
     Test that the FSM transitions from 'detumble' -> 'deploy'
@@ -752,12 +785,12 @@ def test_all():
     #test_fsm_transitions()                           # TESTED
     #test_fsm_deploy_burnwire()                       # TESTED - do deploy aux 1 top one (or bottom) and GND in upper right
     #test_fsm_orient_current()                        # TESTED - do RX0, RX1, TX0, TX1 and GND in upper right
-    #test_fsm_orient_config_change()                  # TESTED       
-    #test_fsm_emergency_detumble()                  
+    #test_fsm_orient_config_change()                  # TESTED                        
     #test_fsm_orient_command()
     #asyncio.run(test_fsm_emergency_detumble())       # TESTED 
     #asyncio.run(test_fsm_detumble_stop_conditions()) # TESTED 
     #asyncio.run(test_fsm_orient_above_battery())     # TESTED
+    #asyncio.run(test_fsm_detumble_max_duration())    # TESTED
 
     # non-fsm tests
     #test_sband()                                    # TESTED
