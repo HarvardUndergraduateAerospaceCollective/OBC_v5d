@@ -37,6 +37,8 @@ from fsm.ExtendedBeacon import ExtendedBeacon
 from fsm.ExtendedCDH import ExtendedCommandDataHandler
 from fsm.ExtendedConfig import ExtendedConfig
 from fsm.fsm import FSM
+from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import MagnetorquerManager
+from lib.pysquared.detumbler_manager import DetumblerManager
 
 
 # ----- Initializations ----- #
@@ -211,6 +213,20 @@ try:
 except Exception:
     logger.debug("WARNING!!! Light sensor 4 failed to initialize")
     light_sensors.append(None)
+
+# Magnetorquer Initializations
+detumbler_manager = DetumblerManager(gain=1.0)
+"""
+# Don't do until plugged in
+magnetorquer_manager = MagnetorquerManager( logger=logger,
+                                            i2c_addr        =0x5a, # TODO: DOUBLE CHECK!  this is default DRV2605 for adafruit
+                                            addr_x_plus     =tca[0],
+                                            addr_x_minus    =tca[1],
+                                            addr_y_plus     =tca[2],
+                                            addr_y_minus    =tca[3],
+                                            addr_z_minus    =tca[4])
+"""
+
 
 
 # CDH

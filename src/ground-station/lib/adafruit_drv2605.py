@@ -11,9 +11,10 @@ examples/simpletest.py for a demo of the usage.
 
 * Author(s): Tony DiCola
 """
-from micropython import const
 
+from adafruit_tca9548a import TCA9548A_Channel
 from adafruit_bus_device.i2c_device import I2CDevice
+from micropython import const
 
 try:
     from typing import Union
@@ -21,7 +22,7 @@ try:
 except ImportError:
     pass
 
-__version__ = "1.3.4"
+__version__ = "1.3.8"
 __repo__ = "https://github.com/adafruit/Adafruit_CircuitPython_DRV2605.git"
 
 
@@ -89,8 +90,12 @@ class DRV2605:
     # thread safe!
     _BUFFER = bytearray(2)
 
-    def __init__(self, i2c: I2C, address: int = _DRV2605_ADDR) -> None:
-        self._device = I2CDevice(i2c, address)
+    def __init__(self, i2c: TCA9548A_Channel, address: int = _DRV2605_ADDR) -> None:
+        # OBC_v5d: check if we're using a TCA9548A_Channel to act out our I2C
+        self._device = i2c  # Use the TCA9548A_Channel directly
+        self._using_tca = True
+        self.address = address
+
         # Check chip ID is 3 or 7 (DRV2605 or DRV2605L).
         status = self._read_u8(_DRV2605_REG_STATUS)
         device_id = (status >> 5) & 0x07
@@ -118,17 +123,17 @@ class DRV2605:
 
     def _read_u8(self, address: int) -> int:
         # Read an 8-bit unsigned value from the specified 8-bit address.
-        with self._device as i2c:
-            self._BUFFER[0] = address & 0xFF
-            i2c.write_then_readinto(self._BUFFER, self._BUFFER, out_end=1, in_end=1)
+        self._BUFFER[0] = address & 0xFF
+        self._device.writeto_then_readfrom(self.address, self._BUFFER, self._BUFFER, out_end=1, in_end=1)
+        # i2c.write_then_readinto(self._BUFFER, self._BUFFER, out_end=1, in_end=1)
         return self._BUFFER[0]
 
     def _write_u8(self, address: int, val: int) -> None:
         # Write an 8-bit unsigned value to the specified 8-bit address.
-        with self._device as i2c:
-            self._BUFFER[0] = address & 0xFF
-            self._BUFFER[1] = val & 0xFF
-            i2c.write(self._BUFFER, end=2)
+        self._BUFFER[0] = address & 0xFF
+        self._BUFFER[1] = val & 0xFF
+        self._device.writeto(self.address, self._BUFFER, end=2)
+        #i2c.write(self._BUFFER, end=2)
 
     def play(self) -> None:
         """Play back the select effect(s) on the motor."""
