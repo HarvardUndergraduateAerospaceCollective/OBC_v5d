@@ -19,7 +19,7 @@ class FSM:
         self.deployment_switch = deployment_switch
         self.state_objects = {
             "bootup"    : StateBootup(dp_obj, logger),
-            "detumble"  : StateDetumble(dp_obj, logger),
+            "detumble"  : StateDetumble(dp_obj, logger, tca),
             "deploy"    : StateDeploy(dp_obj, logger, deployment_switch),
             "orient"    : StateOrient(dp_obj, logger, config, tca, rx0, rx1, tx0, tx1),
         }
