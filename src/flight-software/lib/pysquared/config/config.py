@@ -120,6 +120,9 @@ class Config:
             "longest_allowable_sleep_time"
         ]
 
+        self.orient_payload_setting = json_data["orient_payload_setting"]
+        self.orient_payload_periodic_time = json_data["orient_payload_periodic_time"]
+
         self.CONFIG_SCHEMA = {
             "cubesat_name": {"type": str, "min_length": 1, "max_length": 10},
             "super_secret_code": {"type": bytes, "min": 1, "max": 24},
@@ -140,6 +143,8 @@ class Config:
             "debug": {"type": bool},
             "heating": {"type": bool},
             "turbo_clock": {"type": bool},
+            "orient_payload_setting": {"type" : int},
+            "orient_payload_periodic_time": {"type" : int}
         }
 
     # validates values from input

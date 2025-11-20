@@ -33,9 +33,6 @@ from lib.pysquared.rtc.manager.microcontroller import MicrocontrollerManager
 from lib.pysquared.watchdog import Watchdog
 from version import __version__
 from fsm.data_processes.data_process import DataProcess
-from fsm.ExtendedBeacon import ExtendedBeacon
-from fsm.ExtendedCDH import ExtendedCommandDataHandler
-from fsm.ExtendedConfig import ExtendedConfig
 from fsm.fsm import FSM
 from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import MagnetorquerManager
 from lib.pysquared.detumbler_manager import DetumblerManager
@@ -47,7 +44,7 @@ logger: Logger = Logger(
     colorized=False,
 )
 
-config: ExtendedConfig = ExtendedConfig("config.json")
+config: Config = Config("config.json")
 jokes_config: JokesConfig = JokesConfig("jokes.json")
 
 # manually set the pin high to allow mcp to be detected
@@ -157,30 +154,22 @@ sband_packet_manager = PacketManager(
     0.2,
 )
 
-beacon_fsm = ExtendedBeacon(
-    None, # will be fsm_obj soon!
-    logger,
-    config.cubesat_name,
-    sband_packet_manager,
-    time.monotonic(),
-    imu,
-)
-
 beacon = Beacon(
     logger,
     config.cubesat_name,
     sband_packet_manager,
     time.monotonic(),
+    None, # instantiated later
     imu,
-    magnetometer,
-    sband_radio,
 )
 
-# Light Sensors
+# Payload Pins
 RX0_OUTPUT = initialize_pin(logger, board.RX0, digitalio.Direction.OUTPUT, False)
 RX1_OUTPUT = initialize_pin(logger, board.RX1, digitalio.Direction.OUTPUT, False)
 TX0_OUTPUT = initialize_pin(logger, board.TX0, digitalio.Direction.OUTPUT, False)
 TX1_OUTPUT = initialize_pin(logger, board.TX1, digitalio.Direction.OUTPUT, False)
+
+# Light Sensors
 tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
 light_sensors = []
 try:
@@ -232,7 +221,7 @@ magnetorquer_manager = MagnetorquerManager( logger=logger,
 """
 
 # CDH
-cdh = ExtendedCommandDataHandler(logger, config, uhf_packet_manager, jokes_config)
+cdh = CommandDataHandler(logger, config, uhf_packet_manager, jokes_config)
 
 # ----- Test Functions ----- #
 def test_dm_obj_initialization():
@@ -349,7 +338,7 @@ def test_fsm_transitions():
                 config,
                 deployment_switch=antenna_deployment,
                 tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-        beacon_fsm.fsm_obj = fsm_obj
+        beacon._fsm_obj = fsm_obj
 
         # Initially, FSM should be in bootup
         assert(fsm_obj.curr_state_name == "bootup")
@@ -361,7 +350,7 @@ def test_fsm_transitions():
 
         # Simulate detumble done
         fsm_obj.curr_state_object.done = True
-        fsm_obj.dp_obj.data["data_batt_volt"] = 7
+        fsm_obj.dp_obj.data["data_batt_volt"] = 7.5
         fsm_obj.dp_obj.data["data_imu_av_magnitude"] = 0.2
         fsm_obj.execute_fsm_step()
         assert fsm_obj.curr_state_name == "deploy", "\033[91mFAILED\033[0m [test_fsm_transitions detumble -> deploy]"
@@ -520,7 +509,7 @@ async def test_fsm_emergency_detumble():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
     
     # Initially, FSM should be in bootup
     assert(fsm_obj.curr_state_name == "bootup")
@@ -551,7 +540,7 @@ async def test_fsm_detumble_max_duration():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
     
     # Set these parameters artificially so that it won't ever switch to deploy prematurely
     fsm_obj.dp_obj.data["data_batt_volt"] = 7
@@ -585,7 +574,7 @@ async def test_fsm_detumble_stop_conditions():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
 
     # Initially, FSM should be in bootup
     assert(fsm_obj.curr_state_name == "bootup")
@@ -595,8 +584,8 @@ async def test_fsm_detumble_stop_conditions():
 
     # Now we should be in Detumble
     assert(fsm_obj.curr_state_name == "detumble")
-    # So that the detumble trigger gets done, set arbitrarily to 7 and 0.02 (< 0.05)
-    fsm_obj.dp_obj.data["data_batt_volt"] = 7
+    # So that the detumble trigger gets done, set arbitrarily to 7.5 and 0.02 (< 0.05)
+    fsm_obj.dp_obj.data["data_batt_volt"] = 7.5
     fsm_obj.dp_obj.data["data_imu_av_magnitude"] = 0.02
     # Wait a little so that it execute detumble
     await asyncio.sleep(fsm_obj.curr_state_object.detumble_frequency + 0.1)
@@ -611,7 +600,7 @@ async def test_fsm_detumble_stop_conditions():
     print("\033[92mPASSED\033[0m [test_fsm_detumble_stop_conditions [Part 1, batt and av mag both good]]")
 
     # part 2: test a non-successful stop detumble -> deploy due to battery voltage
-    beacon_fsm.fsm_obj = None
+    beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
 
@@ -623,7 +612,7 @@ async def test_fsm_detumble_stop_conditions():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
 
     # Initially, FSM should be in bootup
     assert(fsm_obj.curr_state_name == "bootup")
@@ -633,7 +622,7 @@ async def test_fsm_detumble_stop_conditions():
 
     # Now we should be in Detumble
     assert(fsm_obj.curr_state_name == "detumble")
-    # So that the detumble trigger gets done, set to 5 (< 6) and 0.02 (< 0.05)
+    # So that the detumble trigger gets done, set to 5 (low) and 0.02 (< 0.05)
     fsm_obj.dp_obj.data["data_batt_volt"] = 5
     fsm_obj.dp_obj.data["data_imu_av_magnitude"] = 0.02
     # Wait a little so that it execute detumble
@@ -663,10 +652,9 @@ async def test_fsm_orient_above_battery():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
-    fsm_obj.payload_deployed = True
-    fsm_obj.antennas_deployed = True
+    fsm_obj.deployed = True
     fsm_obj.set_state("detumble")
     assert(fsm_obj.curr_state_name == "detumble")
     # Wait a little so that it execute detumble
@@ -679,7 +667,7 @@ async def test_fsm_orient_above_battery():
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
-    beacon_fsm.fsm_obj = None
+    beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
     print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 1, detumble, batt is good]]")
@@ -693,10 +681,9 @@ async def test_fsm_orient_above_battery():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
-    fsm_obj.payload_deployed = True
-    fsm_obj.antennas_deployed = True
+    fsm_obj.deployed = True
     fsm_obj.set_state("detumble")
     assert(fsm_obj.curr_state_name == "detumble")
     # Wait a little so that it execute detumble
@@ -709,7 +696,7 @@ async def test_fsm_orient_above_battery():
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
-    beacon_fsm.fsm_obj = None
+    beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
     print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 2, detumble, batt is too low]]")
@@ -723,14 +710,13 @@ async def test_fsm_orient_above_battery():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
-    fsm_obj.payload_deployed = True
-    fsm_obj.antennas_deployed = True
+    fsm_obj.deployed = True
     fsm_obj.set_state("deploy")
     assert(fsm_obj.curr_state_name == "deploy")
     # Wait a little so that it execute deploy
-    fsm_obj.dp_obj.data["data_batt_volt"] = 7
+    fsm_obj.dp_obj.data["data_batt_volt"] = 7.5
     fsm_obj.curr_state_object.finished_burn = True
     await asyncio.sleep(2)
     fsm_obj.execute_fsm_step()
@@ -740,7 +726,7 @@ async def test_fsm_orient_above_battery():
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
-    beacon_fsm.fsm_obj = None
+    beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
     print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 3, deploy, batt is good]]")
@@ -754,10 +740,9 @@ async def test_fsm_orient_above_battery():
             config,
             deployment_switch=antenna_deployment,
             tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
-    beacon_fsm.fsm_obj = fsm_obj
+    beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
-    fsm_obj.payload_deployed = True
-    fsm_obj.antennas_deployed = True
+    fsm_obj.deployed = True
     fsm_obj.set_state("deploy")
     assert(fsm_obj.curr_state_name == "deploy")
     # Wait a little so that it execute deploy
@@ -772,7 +757,7 @@ async def test_fsm_orient_above_battery():
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
-    beacon_fsm.fsm_obj = None
+    beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
     print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 4, deploy, batt is too low]]")

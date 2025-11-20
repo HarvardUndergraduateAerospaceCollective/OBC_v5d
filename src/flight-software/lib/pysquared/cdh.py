@@ -43,6 +43,7 @@ class CommandDataHandler:
     command_change_radio_modulation: str = "change_radio_modulation"
     command_send_joke: str = "send_joke"
     command_get_counter: str = "get_counter"
+    command_orient_payload: str = "orient_payload"
 
     oscar_password: str = "Hello World!"  # Default password for OSCAR commands
 
@@ -247,7 +248,9 @@ class CommandDataHandler:
 
             self._log.debug("Sent Acknowledgement", cmd=cmd, args=args)
 
-            if cmd == self.command_reset:
+            if cmd == self.command_orient_payload:
+                self.set_orient_payload(args)
+            elif cmd == self.command_reset:
                 self.reset()
             elif cmd == self.command_change_radio_modulation:
                 self.change_radio_modulation(args)
@@ -360,3 +363,22 @@ class CommandDataHandler:
             self._packet_manager.send(
                 f"Unknown OSCAR command received: {command}".encode("utf-8")
             )
+
+    def set_orient_payload(self, args: list[str]):
+        try:
+            if len(args) < 2:
+                self._log.debug("Not enough arguments for orient_payload command. Require setting and periodic time (periodic time only will take affect if setting = 2).")
+                return
+            orient_payload_setting = args[0]
+            orient_payload_periodic_time = args[1]
+            if str(orient_payload_setting) in ["0", "1", "2"]:
+                self._config.update_config("orient_payload_setting", int(orient_payload_setting), temporary=False)
+            else:
+                self._log.debug("Invalid orient payload setting.  Set as 0, 1, or 2")
+            if 0 < float(orient_payload_periodic_time) <= 24:
+                self._config.update_config("orient_payload_periodic_time", int(orient_payload_periodic_time), temporary=False)
+            else:
+                self._log.debug("Invalid orient payload periodic time.  Set as as float (hours) between 0, exclusive, and 24, inclusive.")
+        except ValueError as e:
+            self._log.error("Failed to change orient modulation", err=e)
+        self._packet_manager.send(f"New feature executed with args: {args}".encode("utf-8"))

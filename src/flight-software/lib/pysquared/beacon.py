@@ -31,6 +31,7 @@ from .protos.power_monitor import PowerMonitorProto
 from .protos.radio import RadioProto
 from .protos.temperature_sensor import TemperatureSensorProto
 from .sensor_reading.avg import avg_readings
+from fsm.fsm import FSM
 
 try:
     from typing import OrderedDict
@@ -47,6 +48,7 @@ class Beacon:
         name: str,
         packet_manager: PacketManager,
         boot_time: float,
+        fsm_obj: FSM | None = None, 
         *args: PowerMonitorProto
         | RadioProto
         | IMUProto
@@ -69,6 +71,7 @@ class Beacon:
         self._name: str = name
         self._packet_manager: PacketManager = packet_manager
         self._boot_time: float = boot_time
+        self._fsm_obj: FSM | None = fsm_obj
         self._sensors: tuple[
             PowerMonitorProto
             | RadioProto
@@ -206,6 +209,14 @@ class Beacon:
             state: The state dictionary to update.
         """
         state["name"] = self._name
+
+        if self._fsm_obj is not None:
+            state["FSM"] = {
+                "fsm_current_state": str(self._fsm_obj.curr_state_name),
+                "fsm_deployed": str(self._fsm_obj.deployed),
+            }
+        else:
+            state["FSM"] = {}
 
         now = time.localtime()  # type: ignore # PR: https://github.com/adafruit/circuitpython/pull/10603
         state["time"] = (

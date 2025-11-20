@@ -147,7 +147,7 @@ class StateOrient:
                     # 2: +Y
                     # 3: -Y
                 if self.changed == True:
-                    self.logger.info("Turning off payload actuators, iving 2 seconds for spring to settle")
+                    self.logger.info("Turning off payload actuators, giving 2 seconds for spring to settle")
                     self.rx0.value = False
                     self.rx1.value = False
                     self.tx0.value = False

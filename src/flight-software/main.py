@@ -36,7 +36,6 @@ from lib.adafruit_tca9548a import TCA9548A
 
 from version import __version__
 
-time.sleep(30 * 60)  # 30 minutes
 
 boot_time: float = time.time()
 
@@ -44,6 +43,9 @@ rtc = MicrocontrollerManager()
 
 (boot_count := Counter(index=Register.boot_count)).increment()
 error_count: Counter = Counter(index=Register.error_count)
+
+if boot_count.get() <= 3:
+    time.sleep(30 * 60)  # 30 minutes
 
 logger: Logger = Logger(
     error_counter=error_count,
