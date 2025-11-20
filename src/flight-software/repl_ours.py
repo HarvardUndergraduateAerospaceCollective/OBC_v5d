@@ -762,6 +762,60 @@ async def test_fsm_orient_above_battery():
     dm_obj = None
     print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 4, deploy, batt is too low]]")
 
+def test_i2c_scan():
+    """
+    Scan all I2C buses and multiplexer channels to detect connected devices.
+    Prints out the addresses of all detected I2C devices.
+    """
+    print("\n=== I2C Scanner ===")
+    
+    # Scan the primary I2C buses
+    print("\nScanning i2c0 bus:")
+    try:
+        i2c0.try_lock()
+        devices = i2c0.scan()
+        i2c0.unlock()
+        if devices:
+            print(f"Found {len(devices)} devices:")
+            for addr in devices:
+                print(f"  - Device at address: 0x{addr:02X}")
+        else:
+            print("No devices found")
+    except Exception as e:
+        print(f"Error scanning i2c0: {e}")
+    
+    print("\nScanning i2c1 bus:")
+    try:
+        i2c1.try_lock()
+        devices = i2c1.scan()
+        i2c1.unlock()
+        if devices:
+            print(f"Found {len(devices)} devices:")
+            for addr in devices:
+                print(f"  - Device at address: 0x{addr:02X}")
+        else:
+            print("No devices found")
+    except Exception as e:
+        print(f"Error scanning i2c1: {e}")
+    
+    # Scan TCA9548A multiplexer channels if available
+    print("\nScanning TCA9548A multiplexer channels:")
+    try:
+        for i in range(len(tca.channels)):
+            channel = tca[i]
+            channel.try_lock()
+            devices = channel.scan()
+            channel.unlock()
+            if devices:
+                print(f"Channel {i}: Found {len(devices)} devices:")
+                for addr in devices:
+                    print(f"  - Device at address: 0x{addr:02X}")
+            else:
+                print(f"Channel {i}: No devices found")
+    except Exception as e:
+        print(f"Error scanning multiplexer: {e}")
+    print("\n=== I2C Scan Complete ===")
+
 
 # ========== MAIN FUNCTION ========== #
 
@@ -779,11 +833,12 @@ def test_all():
 
     # non-fsm tests
     #test_sband()                                    # TESTED
+    #test_i2c_scan()
 
     # dm_obj tests
     #test_dm_obj_initialization()                     # TESTED
     #asyncio.run(test_dm_obj_get_data_updates())      # TESTED
     #asyncio.run(test_dm_obj_magnetometer())          # TESTED
     #asyncio.run(test_dm_obj_imu())                   # TESTED
-    asyncio.run(test_dm_obj_battery())               # TESTED
+    #asyncio.run(test_dm_obj_battery())               # TESTED
     pass
