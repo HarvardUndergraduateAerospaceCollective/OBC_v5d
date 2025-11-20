@@ -13,20 +13,27 @@ from fsm.state_processes.state_detumble import StateDetumble
 # ++++++++++++++++++++ Class Definition ++++++++++++++++++++ #
 class FSM:
     def __init__(self, dp_obj, logger, config, deployment_switch,
-                 tca, rx0, rx1, tx0, tx1):
+                 tca, rx0, rx1, tx0, tx1,
+                 face0_sensor, face1_sensor, face2_sensor, face3_sensor,
+                 magnetorquer_manager,
+                 detumbler_manager
+                 ):
         self.dp_obj = dp_obj    # object of type DataProcess
         self.logger = logger    # logging status of FSM states
         self.deployment_switch = deployment_switch
         self.state_objects = {
             "bootup"    : StateBootup(dp_obj, logger),
-            "detumble"  : StateDetumble(dp_obj, logger, tca),
+            "detumble"  : StateDetumble(dp_obj, logger, tca, magnetorquer_manager, detumbler_manager),
             "deploy"    : StateDeploy(dp_obj, logger, deployment_switch),
-            "orient"    : StateOrient(dp_obj, logger, config, tca, rx0, rx1, tx0, tx1),
+            "orient"    : StateOrient(dp_obj, logger, config, tca, rx0, rx1, tx0, tx1,
+                                      face0_sensor, face1_sensor, face2_sensor, face3_sensor),
         }
         self.curr_state_name = "bootup"
         self.curr_state_object = self.state_objects["bootup"]
         self.curr_state_run_asyncio_task = asyncio.create_task(self.curr_state_object.run())
         self.deployed = False
+        self.orient_best_direction = "None Better That Others"
+        self.orient_light_intensity = []
     
     def set_state(self, new_state_name):
         """
@@ -54,6 +61,23 @@ class FSM:
         
         # NOTE: Emergency override for low battery and power consumption is handled in main.py
         # NOTE: Need to introduce emergency detumble post-first detumble, then continue where left off
+
+        if self.curr_state_name == "orient":
+            if self.curr_state_object.best_direction == -1:
+                self.orient_best_direction = "None Better That Others"
+            elif self.curr_state_object.best_direction == 0:
+                self.orient_best_direction = "+X Axis"
+            elif self.curr_state_object.best_direction == 1:
+                self.orient_best_direction = "-X Axis"
+            elif self.curr_state_object.best_direction == 2:
+                self.orient_best_direction = "+Y Axis"
+            elif self.curr_state_object.best_direction == 3:
+                self.orient_best_direction = "-Y Axis"
+            elif self.curr_state_object.best_direction == 4:
+                self.orient_best_direction = "-Z Axis"
+            self.orient_light_intensity = self.curr_state_object.light_intensity
+            self.logger.info("[FSM] orient_best_direction: " + str(self.curr_state_object.best_direction) + ", " + str(self.orient_best_direction))
+            self.logger.info("[FSM] orient_light_intensity: " + str(self.curr_state_object.light_intensity) + ", " + str(self.orient_light_intensity))
 
         # Startup → Detumble
         if self.curr_state_name == "bootup" and self.curr_state_object.is_done():

@@ -214,6 +214,8 @@ class Beacon:
             state["FSM"] = {
                 "fsm_current_state": str(self._fsm_obj.curr_state_name),
                 "fsm_deployed": str(self._fsm_obj.deployed),
+                "fsm_orient_best_direction": str(self._fsm_obj.orient_best_direction),
+                "fsm_orient_light_intensity": str(self._fsm_obj.orient_light_intensity),
             }
         else:
             state["FSM"] = {}

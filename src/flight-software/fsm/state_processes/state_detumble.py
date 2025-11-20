@@ -11,7 +11,8 @@ from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import Magnetorque
 
 # ++++++++++++++ Functions: Helper ++++++++++++++ #
 class StateDetumble:
-    def __init__(self, dp_obj, logger, tca):
+    def __init__(self, dp_obj, logger, 
+                 tca, magnetorquer_manager, detumbler_manager):
         """
         Initialize the class object
         """
@@ -21,20 +22,10 @@ class StateDetumble:
         self.done = False
         self.detumble_frequency = 5 # in seconds; how long to wait between data reads
         self.detumble_threshold = 0.05
-        self.max_time = 5400        # 90 minutes (~1 orbit) to try and stabilize
+        self.max_time = 5400        # 90 minutes to try and stabilize
         self.start_time = None
-        self.magnetorquer_manager = None
-        """
-        TODO:
-        MagnetorquerManager( logger=self.logger,
-                                            i2c_addr        =0x5a,
-                                            addr_x_plus     =tca[0],
-                                            addr_x_minus    =tca[1],
-                                            addr_y_plus     =tca[2],
-                                            addr_y_minus    =tca[3],
-                                            addr_z_minus    =tca[4])
-        """                               
-        self.detumbler_manager = DetumblerManager(gain=1.0)
+        self.magnetorquer_manager : MagnetorquerManager | None = magnetorquer_manager                          
+        self.detumbler_manager = detumbler_manager
 
     async def run(self):
         """

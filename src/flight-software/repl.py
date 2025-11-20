@@ -172,27 +172,31 @@ TX1_OUTPUT = initialize_pin(logger, board.TX1, digitalio.Direction.OUTPUT, False
 # Light Sensors
 tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
 light_sensors = []
+face0_sensor = None
+face1_sensor = None
+face2_sensor = None
+face3_sensor = None
 try:
-    sensor = VEML6031x00Manager(logger, tca[0])
-    light_sensors.append(sensor)
+    face0_sensor = VEML6031x00Manager(logger, tca[0])
+    light_sensors.append(face0_sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 0 failed to initialize")
     light_sensors.append(None)
 try:
-    sensor = VEML6031x00Manager(logger, tca[1])
-    light_sensors.append(sensor)
+    face1_sensor = VEML6031x00Manager(logger, tca[1])
+    light_sensors.append(face1_sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 1 failed to initialize")
     light_sensors.append(None)
 try:
-    sensor = VEML6031x00Manager(logger, tca[2])
-    light_sensors.append(sensor)
+    face2_sensor = VEML6031x00Manager(logger, tca[2])
+    light_sensors.append(face2_sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 2 failed to initialize")
     light_sensors.append(None)
 try:
-    sensor = VEML6031x00Manager(logger, tca[3])
-    light_sensors.append(sensor)
+    face3_sensor = VEML6031x00Manager(logger, tca[3])
+    light_sensors.append(face3_sensor)
 except Exception:
     logger.debug("WARNING!!! Light sensor 3 failed to initialize")
     light_sensors.append(None)
@@ -209,6 +213,7 @@ In main.py no need to instantiate these, these will be used by State Detumble
 We're instantiating here to test it can be instantiated.
 """
 detumbler_manager = DetumblerManager(gain=1.0)
+magnetorquer_manager = None
 """
 # Don't do until plugged in
 magnetorquer_manager = MagnetorquerManager( logger=logger,
@@ -337,7 +342,11 @@ def test_fsm_transitions():
                 logger,
                 config,
                 deployment_switch=antenna_deployment,
-                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+                face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+                face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+                magnetorquer_manager=magnetorquer_manager,
+                detumbler_manager=detumbler_manager)
         beacon._fsm_obj = fsm_obj
 
         # Initially, FSM should be in bootup
@@ -419,7 +428,11 @@ def test_fsm_orient_config_change():
                 logger,
                 config,
                 deployment_switch=antenna_deployment,
-                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+                face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+                face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+                magnetorquer_manager=magnetorquer_manager,
+                detumbler_manager=detumbler_manager)
         
         fsm_obj.set_state("orient")
 
@@ -457,7 +470,11 @@ def test_fsm_orient_command():
                 logger,
                 config,
                 deployment_switch=antenna_deployment,
-                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+                face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+                face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+                magnetorquer_manager=magnetorquer_manager,
+                detumbler_manager=detumbler_manager)
         fsm_obj.set_state("orient")
         print(fsm_obj.curr_state_object.orient_payload_setting)
         print(fsm_obj.curr_state_object.orient_payload_periodic_time)
@@ -508,7 +525,11 @@ async def test_fsm_emergency_detumble():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
     
     # Initially, FSM should be in bootup
@@ -539,11 +560,15 @@ async def test_fsm_detumble_max_duration():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
     
     # Set these parameters artificially so that it won't ever switch to deploy prematurely
-    fsm_obj.dp_obj.data["data_batt_volt"] = 7
+    fsm_obj.dp_obj.data["data_batt_volt"] = 7.5
     fsm_obj.dp_obj.data["data_imu_av_magnitude"] = 0.5
     fsm_obj.set_state("detumble")
 
@@ -573,7 +598,11 @@ async def test_fsm_detumble_stop_conditions():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
 
     # Initially, FSM should be in bootup
@@ -611,7 +640,11 @@ async def test_fsm_detumble_stop_conditions():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
 
     # Initially, FSM should be in bootup
@@ -637,6 +670,70 @@ async def test_fsm_detumble_stop_conditions():
         fsm_obj.curr_state_run_asyncio_task.cancel()
     print("\033[92mPASSED\033[0m [test_fsm_detumble_stop_conditions [Part 2, batt too low]]")
 
+
+async def test_fsm_orient_run():
+    """
+    Test that the orient runs through an algorithm
+    """
+
+    # part 1: test a successful stop detumble -> orient
+    dm_obj = DataProcess(magnetometer=magnetometer,
+                        imu=imu,
+                        battery_power_monitor=battery_power_monitor)
+    fsm_obj = FSM(dm_obj,
+            logger,
+            config,
+            deployment_switch=antenna_deployment,
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
+    beacon._fsm_obj = fsm_obj
+    fsm_obj.set_state("orient")
+    await asyncio.sleep(10)
+    input("Is the log output acceptable? (Y/N): ").strip().upper()
+    # Clean up asyncio task if created
+    if fsm_obj.curr_state_run_asyncio_task is not None:
+        fsm_obj.curr_state_object.stop()
+        fsm_obj.curr_state_run_asyncio_task.cancel()
+    print("\033[92mPASSED\033[0m [test_fsm_orient_run]")
+
+
+async def test_fsm_orient_cdh_output():
+    """
+    Test that the orient's chosen direction gets outputted
+    """
+
+    # part 1: test a successful stop detumble -> orient
+    dm_obj = DataProcess(magnetometer=magnetometer,
+                        imu=imu,
+                        battery_power_monitor=battery_power_monitor)
+    fsm_obj = FSM(dm_obj,
+            logger,
+            config,
+            deployment_switch=antenna_deployment,
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
+    beacon._fsm_obj = fsm_obj
+    fsm_obj.set_state("orient")
+    # note you may need to adjust the sleeps
+    await asyncio.sleep(1)
+    fsm_obj.execute_fsm_step()
+    await asyncio.sleep(1)
+    fsm_obj.execute_fsm_step()
+    await asyncio.sleep(1)
+    input("Is the log output acceptable? (Y/N): ").strip().upper()
+    # Clean up asyncio task if created
+    if fsm_obj.curr_state_run_asyncio_task is not None:
+        fsm_obj.curr_state_object.stop()
+        fsm_obj.curr_state_run_asyncio_task.cancel()
+    print("\033[92mPASSED\033[0m [test_fsm_orient_run]")
+
+
 async def test_fsm_orient_above_battery():
     """
     Test that the FSM transitions from 'detumble' or 'deploy' -> 'orient' when battery is sufficient.
@@ -651,7 +748,11 @@ async def test_fsm_orient_above_battery():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -680,7 +781,11 @@ async def test_fsm_orient_above_battery():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -709,7 +814,11 @@ async def test_fsm_orient_above_battery():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -739,7 +848,11 @@ async def test_fsm_orient_above_battery():
             logger,
             config,
             deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT)
+            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -830,6 +943,8 @@ def test_all():
     #asyncio.run(test_fsm_detumble_stop_conditions()) # TESTED 
     #asyncio.run(test_fsm_orient_above_battery())     # TESTED
     #asyncio.run(test_fsm_detumble_max_duration())    # TESTED
+    #asyncio.run(test_fsm_orient_run())               # TESTED
+    #asyncio.run(test_fsm_orient_cdh_output())        # TESTED
 
     # non-fsm tests
     #test_sband()                                    # TESTED

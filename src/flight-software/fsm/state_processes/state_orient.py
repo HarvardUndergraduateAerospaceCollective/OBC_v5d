@@ -9,7 +9,10 @@ from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00M
 
 # ++++++++++++++ Functions: Helper ++++++++++++++ #
 class StateOrient:
-    def __init__(self, dp_obj, logger, config, tca, rx0, rx1, tx0, tx1):
+    def __init__(self, dp_obj, logger, config, 
+                 tca, rx0, rx1, tx0, tx1,
+                 face0_sensor, face1_sensor, face2_sensor, face3_sensor
+                 ):
         """
         Initialize the class object
         """
@@ -25,28 +28,13 @@ class StateOrient:
         self.config = config
         self.best_direction = -1
 
-        self.face0_sensor = None
-        self.face1_sensor = None
-        self.face2_sensor = None
-        self.face3_sensor = None
+        self.face0_sensor : VEML6031x00Manager | None = face0_sensor
+        self.face1_sensor : VEML6031x00Manager | None = face1_sensor
+        self.face2_sensor : VEML6031x00Manager | None = face2_sensor
+        self.face3_sensor : VEML6031x00Manager | None = face3_sensor
 
-        try:
-            self.face0_sensor = VEML6031x00Manager(logger, tca[0])
-        except Exception:
-            self.logger.debug("[WARNING] Light sensor 0 failed to initialize")
-        try:
-            self.face1_sensor = VEML6031x00Manager(logger, tca[1])
-        except Exception:
-            self.logger.debug("[WARNING] Light sensor 1 failed to initialize")
-        try:
-            self.face2_sensor = VEML6031x00Manager(logger, tca[2])
-        except Exception:
-            self.logger.debug("[WARNING] Light sensor 2 failed to initialize")
-        try:
-            self.face3_sensor = VEML6031x00Manager(logger, tca[3])
-        except Exception:
-            self.logger.debug("[WARNING] Light sensor 3 failed to initialize")
-
+        self.light_intensity = []
+        
     @property
     def orient_payload_setting(self):
         return self.config.orient_payload_setting
@@ -97,6 +85,7 @@ class StateOrient:
                 except Exception as e:
                     self.logger.debug(f"Failed to read light sensors: {e}")
                     lights = [Light(0.0), Light(0.0), Light(0.0), Light(0.0)]
+                    self.light_intensity = [lights[i]._value for i in range(4)]
 
                 # step 2: create light vectors
                 # light_vec: [v1, v2, v3, v4]
