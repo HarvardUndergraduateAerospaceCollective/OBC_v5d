@@ -11,6 +11,8 @@
   "heating": false,
   "orient_payload_setting": 1,
   "orient_payload_periodic_time": 24,
+  "orient_light_threshold": 10,
+  "orient_heat_duration": 10,
   "joke_reply": [
     "Your Mom",
     "Your Mum",

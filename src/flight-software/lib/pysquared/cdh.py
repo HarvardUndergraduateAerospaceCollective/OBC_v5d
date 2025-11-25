@@ -44,7 +44,10 @@ class CommandDataHandler:
     command_send_joke: str = "send_joke"
     command_get_counter: str = "get_counter"
     command_orient_payload: str = "orient_payload"
-
+    command_change_orient_payload_periodic_time: str = "orient_payload_periodic_time"
+    command_change_orient_light_threshold: str = "orient_light_threshold"
+    command_change_orient_heat_duration: str = "orient_heat_duration"
+    
     oscar_password: str = "Hello World!"  # Default password for OSCAR commands
 
     def __init__(
@@ -250,6 +253,12 @@ class CommandDataHandler:
 
             if cmd == self.command_orient_payload:
                 self.set_orient_payload(args)
+            elif cmd == self.command_change_orient_payload_periodic_time:
+                self.change_orient_payload_periodic_time(args)
+            elif cmd == self.command_change_orient_light_threshold:
+                self.change_orient_light_threshold(args)
+            elif cmd == self.command_change_orient_heat_duration:
+                self.change_orient_heat_duration(args)
             elif cmd == self.command_reset:
                 self.reset()
             elif cmd == self.command_change_radio_modulation:
@@ -321,6 +330,99 @@ class CommandDataHandler:
                 f"Failed to change radio modulation: {e}".encode("utf-8")
             )
 
+    def change_orient_payload_periodic_time(self, args: list[str]) -> None:
+        """Changes the orient payload periodic time (in minutes) when under the Sun.
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        orient_payload_periodic_time = 24
+
+        if len(args) < 1:
+            self._log.warning("No payload periodic time specified")
+            self._packet_manager.send(
+                "No payload periodic time specified. Please provide an integer (in minutes).".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        orient_payload_periodic_time = int(args[0])
+
+        try:
+            self._config.update_config("orient_payload_periodic_time", orient_payload_periodic_time, temporary=False)
+            self._log.info("Orient periodic time changed")
+            self._packet_manager.send(
+                f"Orient periodic time changed: {orient_payload_periodic_time}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change orient periodic time", err=e)
+            self._packet_manager.send(
+                f"Failed to change orient periodic time: {e}".encode("utf-8")
+            )
+
+    def change_orient_light_threshold(self, args: list[str]) -> None:
+        """Changes the orient light threshold (in units).
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        orient_light_threshold = 10
+
+        if len(args) < 1:
+            self._log.warning("No light threshold time specified")
+            self._packet_manager.send(
+                "No light threshold specified. Please provide an integer.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        orient_light_threshold = int(args[0])
+
+        try:
+            self._config.update_config("orient_light_threshold", orient_light_threshold, temporary=False)
+            self._log.info("Orient light threhsold changed")
+            self._packet_manager.send(
+                f"Orient light threhsold changed: {orient_light_threshold}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change orient light threshold", err=e)
+            self._packet_manager.send(
+                f"Failed to change orient light threshold: {e}".encode("utf-8")
+            )
+
+    def change_orient_heat_duration(self, args: list[str]) -> None:
+        """Changes the orient heat duration (in seconds).
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        orient_heat_duration = 10
+
+        if len(args) < 1:
+            self._log.warning("No orient heat duration specified")
+            self._packet_manager.send(
+                "No orient heat duration specified. Please provide an integer (in seconds).".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        orient_heat_duration = int(args[0])
+
+        try:
+            self._config.update_config("orient_heat_duration", orient_heat_duration, temporary=False)
+            self._log.info("Orient heat duration changed")
+            self._packet_manager.send(
+                f"Orient heat duration changed: {orient_heat_duration}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change orient heat duration", err=e)
+            self._packet_manager.send(
+                f"Failed to change orient heat duration: {e}".encode("utf-8")
+            )
+
     def reset(self) -> None:
         """Resets the hardware."""
         # Delay to give the ground station time to switch to listening mode
@@ -366,19 +468,14 @@ class CommandDataHandler:
 
     def set_orient_payload(self, args: list[str]):
         try:
-            if len(args) < 2:
-                self._log.debug("Not enough arguments for orient_payload command. Require setting and periodic time (periodic time only will take affect if setting = 2).")
+            if len(args) < 1:
+                self._log.debug("Not enough arguments for orient_payload command. Requires setting (ex: 0 or 1).")
                 return
             orient_payload_setting = args[0]
-            orient_payload_periodic_time = args[1]
-            if str(orient_payload_setting) in ["0", "1", "2"]:
+            if str(orient_payload_setting) in ["0", "1"]:
                 self._config.update_config("orient_payload_setting", int(orient_payload_setting), temporary=False)
             else:
-                self._log.debug("Invalid orient payload setting.  Set as 0, 1, or 2")
-            if 0 < float(orient_payload_periodic_time) <= 24:
-                self._config.update_config("orient_payload_periodic_time", int(orient_payload_periodic_time), temporary=False)
-            else:
-                self._log.debug("Invalid orient payload periodic time.  Set as as float (hours) between 0, exclusive, and 24, inclusive.")
+                self._log.debug("Invalid orient payload setting.  Set as 0 or 1")
         except ValueError as e:
             self._log.error("Failed to change orient modulation", err=e)
         self._packet_manager.send(f"New feature executed with args: {args}".encode("utf-8"))

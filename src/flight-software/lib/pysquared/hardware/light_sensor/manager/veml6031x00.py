@@ -188,7 +188,7 @@ class VEML6031x00Manager(LightSensorProto):
         except HardwareInitializationError:
             raise
         except Exception as e:
-            raise HardwareInitializationError("Failed to initialize VEML6031x00") from e
+            raise HardwareInitializationError(f"Failed to initialize VEML6031x00 {e}") from e
 
     def get_light(self) -> Light:
         """Perform a single measurement and return raw ambient-light counts.

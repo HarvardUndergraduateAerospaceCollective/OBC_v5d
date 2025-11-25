@@ -16,7 +16,8 @@ class FSM:
                  tca, rx0, rx1, tx0, tx1,
                  face0_sensor, face1_sensor, face2_sensor, face3_sensor,
                  magnetorquer_manager,
-                 detumbler_manager
+                 detumbler_manager,
+                 PAYLOAD_BATT_ENABLE
                  ):
         self.dp_obj = dp_obj    # object of type DataProcess
         self.logger = logger    # logging status of FSM states
@@ -26,7 +27,8 @@ class FSM:
             "detumble"  : StateDetumble(dp_obj, logger, tca, magnetorquer_manager, detumbler_manager),
             "deploy"    : StateDeploy(dp_obj, logger, deployment_switch),
             "orient"    : StateOrient(dp_obj, logger, config, tca, rx0, rx1, tx0, tx1,
-                                      face0_sensor, face1_sensor, face2_sensor, face3_sensor),
+                                      face0_sensor, face1_sensor, face2_sensor, face3_sensor,
+                                      PAYLOAD_BATT_ENABLE),
         }
         self.curr_state_name = "bootup"
         self.curr_state_object = self.state_objects["bootup"]
@@ -60,7 +62,6 @@ class FSM:
         """
         
         # NOTE: Emergency override for low battery and power consumption is handled in main.py
-        # NOTE: Need to introduce emergency detumble post-first detumble, then continue where left off
 
         if self.curr_state_name == "orient":
             if self.curr_state_object.best_direction == -1:

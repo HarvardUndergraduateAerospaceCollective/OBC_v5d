@@ -122,6 +122,8 @@ class Config:
 
         self.orient_payload_setting = json_data["orient_payload_setting"]
         self.orient_payload_periodic_time = json_data["orient_payload_periodic_time"]
+        self.orient_light_threshold = json_data["orient_light_threshold"]
+        self.orient_heat_duration = json_data["orient_heat_duration"]
 
         self.CONFIG_SCHEMA = {
             "cubesat_name": {"type": str, "min_length": 1, "max_length": 10},
@@ -144,7 +146,9 @@ class Config:
             "heating": {"type": bool},
             "turbo_clock": {"type": bool},
             "orient_payload_setting": {"type" : int},
-            "orient_payload_periodic_time": {"type" : int}
+            "orient_payload_periodic_time": {"type" : int},
+            "orient_light_threshold": {"type" : int},
+            "orient_heat_duration": {"type" : int}
         }
 
     # validates values from input

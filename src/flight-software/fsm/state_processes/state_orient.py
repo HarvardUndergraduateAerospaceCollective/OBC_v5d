@@ -11,7 +11,8 @@ from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00M
 class StateOrient:
     def __init__(self, dp_obj, logger, config, 
                  tca, rx0, rx1, tx0, tx1,
-                 face0_sensor, face1_sensor, face2_sensor, face3_sensor
+                 face0_sensor, face1_sensor, face2_sensor, face3_sensor,
+                 PAYLOAD_BATT_ENABLE
                  ):
         """
         Initialize the class object
@@ -27,6 +28,7 @@ class StateOrient:
         self.tx1 = tx1
         self.config = config
         self.best_direction = -1
+        self.PAYLOAD_BATT_ENABLE = PAYLOAD_BATT_ENABLE
 
         self.face0_sensor : VEML6031x00Manager | None = face0_sensor
         self.face1_sensor : VEML6031x00Manager | None = face1_sensor
@@ -64,16 +66,17 @@ class StateOrient:
         Run the deployment sequence asynchronously
         """
         self.running = True
+        in_sunlight = False
         while self.running:
             if self.config.orient_payload_setting == 0:
                  # don't do anything
+                 self.PAYLOAD_BATT_ENABLE.value = False
                  await asyncio.sleep(2)
             else:
-                # do this loop forever
-                # TODO: distinguish btw 1 and 2
+                # wait a little bit before beginning, just for stabilization
                 await asyncio.sleep(2)
 
-                # step 1: get light readings
+                # step 0: get light readings
                 # lights: [scalar, scalar, scalar, scalar]
                 try:
                     light1 = self.face0_sensor.get_light() if self.face0_sensor is not None else Light(0.0)
@@ -85,94 +88,112 @@ class StateOrient:
                 except Exception as e:
                     self.logger.debug(f"Failed to read light sensors: {e}")
                     lights = [Light(0.0), Light(0.0), Light(0.0), Light(0.0)]
-                    self.light_intensity = [lights[i]._value for i in range(4)]
+                self.light_intensity = [lights[i]._value for i in range(4)]
 
-                # step 2: create light vectors
-                # light_vec: [v1, v2, v3, v4]
-                pos_xvec = [1, 0]
-                neg_xvec = [-1, 0]
-                pos_yvec = [0, 1]
-                neg_yvec = [0, -1]
-                lightvecs = [pos_xvec, neg_xvec, pos_yvec, neg_yvec]
+                # step 1: determine if we are in sunlight
+                # if we are in sunlight, pull one of the sensors and wait 25 minutes
+                max_light = max(self.light_intensity)
+                in_sunlight = max_light > self.config.orient_light_threshold
+                if not in_sunlight:
+                    # if not in sunlight, try again another read in 2 minutes
+                    # wait 2 minutes to allow for quick adjustment once we're back in sunlight
+                    await asyncio.sleep(2 * 60)
+                else:
+                    # step 2: create light vectors
+                    # light_vec: [v1, v2, v3, v4]
+                    pos_xvec = [1, 0]
+                    neg_xvec = [-1, 0]
+                    pos_yvec = [0, 1]
+                    neg_yvec = [0, -1]
+                    lightvecs = [pos_xvec, neg_xvec, pos_yvec, neg_yvec]
 
-                # step 3: weight the light vectors by the light reading
-                light_vec = [[0.0, 0.0] for _ in range(4)]
-                for i in range(4):
-                    light_vec[i] = self.vector_mul_scalar(lightvecs[i], lights[i]._value)
+                    # step 3: weight the light vectors by the light reading
+                    light_vec = [[0.0, 0.0] for _ in range(4)]
+                    for i in range(4):
+                        light_vec[i] = self.vector_mul_scalar(lightvecs[i], lights[i]._value)
 
-                # step 4: compute the norm sum of the weighted light vectors, net_vec is the sun vector magnitude
-                # lightvecs is list of vectors, lights is list of scalars
-                weighted_vecs = [self.vector_mul_scalar(lightvecs[i], lights[i]._value) for i in range(4)]
-                net_vec = [0.0, 0.0]
-                for v in weighted_vecs:
-                    net_vec = self.vector_add(net_vec, v)
+                    # step 4: compute the norm sum of the weighted light vectors, net_vec is the sun vector magnitude
+                    # lightvecs is list of vectors, lights is list of scalars
+                    weighted_vecs = [self.vector_mul_scalar(lightvecs[i], lights[i]._value) for i in range(4)]
+                    net_vec = [0.0, 0.0]
+                    for v in weighted_vecs:
+                        net_vec = self.vector_add(net_vec, v)
 
-                # step 5: determine all the directions from which to pull
-                # either east, west, north, or south
-                point_vecs = [[1,0], [-1,0], [0,1], [0,-1]]
-                
-                # step 6: find best alginment
-                # find maximum dot product between net_vec and point_vecs
-                max_dot_product = -float('inf')
-                for i in range(4):
-                    dot_product = sum([a * b for a, b in zip(net_vec, point_vecs[i])])
-                    if dot_product > max_dot_product:
-                        max_dot_product = dot_product
-                        if self.best_direction != -i:
-                            self.changed = True
-                        self.best_direction = i
+                    # step 5: determine all the directions from which to pull
+                    # either east, west, north, or south
+                    point_vecs = [[1,0], [-1,0], [0,1], [0,-1]]
+                    
+                    # step 6: find best alginment
+                    # find maximum dot product between net_vec and point_vecs
+                    max_dot_product = -float('inf')
+                    for i in range(4):
+                        dot_product = sum([a * b for a, b in zip(net_vec, point_vecs[i])])
+                        if dot_product > max_dot_product:
+                            max_dot_product = dot_product
+                            if self.best_direction != -i:
+                                self.changed = True
+                            self.best_direction = i
 
+                    # step 7: log the results
+                    self.logger.info(f"Sun vector: {net_vec}")
+                    self.logger.info(f"Best direction: {self.best_direction}, Alignment: {max_dot_product:.3f}")
+                    
+                    # activate the spring corresponding to best_direction
+                    # Direction mapping:
+                        # -1: none actuated
+                        # 0: +X
+                        # 1: -X
+                        # 2: +Y
+                        # 3: -Y
+                    if self.changed == True:
+                        self.logger.info("Turning off payload actuators, giving 2 seconds for spring to settle")
+                        self.rx0.value = False
+                        self.rx1.value = False
+                        self.tx0.value = False
+                        self.tx1.value = False
+                    if self.best_direction == -1:
+                        self.logger.info("No current through any springs")
+                        self.rx0.value = False
+                        self.rx1.value = False
+                        self.tx0.value = False
+                        self.tx1.value = False
+                    if self.best_direction == 0:
+                        self.logger.info("Activating +X spring")
+                        self.rx0.value = True
+                        self.rx1.value = False
+                        self.tx0.value = False
+                        self.tx1.value = False
+                    if self.best_direction == 1:
+                        self.logger.info("Activating -X spring")
+                        self.rx0.value = False
+                        self.rx1.value = True
+                        self.tx0.value = False
+                        self.tx1.value = False
+                    if self.best_direction == 2:
+                        self.logger.info("Activating +Y spring")
+                        self.rx0.value = False
+                        self.rx1.value = False
+                        self.tx0.value = True
+                        self.tx1.value = False
+                    if self.best_direction == 3:
+                        self.logger.info("Activating -Y spring")
+                        self.rx0.value = False
+                        self.rx1.value = False
+                        self.tx0.value = False
+                        self.tx1.value = True
+                    # set self.changed to False at the end
+                    self.changed = False
 
-                # step 7: log the results
-                self.logger.info(f"Sun vector: {net_vec}")
-                self.logger.info(f"Best direction: {self.best_direction}, Alignment: {max_dot_product:.3f}")
-                
-                # activate the spring corresponding to best_direction
-                # TODO: Implement actual spring activation based on best_direction
-                # Direction mapping:
-                    # -1: none actuated
-                    # 0: +X
-                    # 1: -X
-                    # 2: +Y
-                    # 3: -Y
-                if self.changed == True:
-                    self.logger.info("Turning off payload actuators, giving 2 seconds for spring to settle")
+                    # hold True for X seconds (avoid overheating)
+                    # then, set everything to False
+                    await asyncio.sleep(self.config.orient_heat_duration)
                     self.rx0.value = False
                     self.rx1.value = False
                     self.tx0.value = False
                     self.tx1.value = False
-                if self.best_direction == -1:
-                    self.logger.info("No current through any springs")
-                    self.rx0.value = False
-                    self.rx1.value = False
-                    self.tx0.value = False
-                    self.tx1.value = False
-                if self.best_direction == 0:
-                    self.logger.info("Activating +X spring")
-                    self.rx0.value = True
-                    self.rx1.value = False
-                    self.tx0.value = False
-                    self.tx1.value = False
-                if self.best_direction == 1:
-                    self.logger.info("Activating -X spring")
-                    self.rx0.value = False
-                    self.rx1.value = True
-                    self.tx0.value = False
-                    self.tx1.value = False
-                if self.best_direction == 2:
-                    self.logger.info("Activating +Y spring")
-                    self.rx0.value = False
-                    self.rx1.value = False
-                    self.tx0.value = True
-                    self.tx1.value = False
-                if self.best_direction == 3:
-                    self.logger.info("Activating -Y spring")
-                    self.rx0.value = False
-                    self.rx1.value = False
-                    self.tx0.value = False
-                    self.tx1.value = True
-                # set self.changed to False at the end
-                self.changed = False
+
+                    # wait 25 minutes for the next read
+                    await asyncio.sleep(self.config.orient_payload_periodic_time * 60)
 
     def stop(self):
         """

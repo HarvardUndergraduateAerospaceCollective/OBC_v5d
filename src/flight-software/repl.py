@@ -85,11 +85,17 @@ ENABLE_HEATER = mcp.get_pin(0)
 PAYLOAD_PWR_ENABLE = mcp.get_pin(1)
 PAYLOAD_BATT_ENABLE = mcp.get_pin(3)
 ENABLE_HEATER.direction = digitalio.Direction.OUTPUT
-PAYLOAD_PWR_ENABLE.direction = digitalio.Direction.OUTPUT
+PAYLOAD_PWR_ENABLE.direction = digitalio.Direction.OUTPUT # never need it
 PAYLOAD_BATT_ENABLE.direction = digitalio.Direction.OUTPUT
 
+
+FACE2_ENABLE = mcp.get_pin(11)
+FACE2_ENABLE.direction = digitalio.Direction.OUTPUT
+load_switch_2 = LoadSwitchManager(FACE2_ENABLE, True)  # type: ignore , upstream on mcp TODO
+load_switch_2.enable_load()
+
 # set these to high so that we have the circuitry ready for use
-PAYLOAD_PWR_ENABLE.value = True
+PAYLOAD_PWR_ENABLE.value = False
 PAYLOAD_BATT_ENABLE.value = True
 
 SPI0_CS0 = initialize_pin(logger, board.SPI0_CS0, digitalio.Direction.OUTPUT, True)
@@ -177,34 +183,11 @@ face1_sensor = None
 face2_sensor = None
 face3_sensor = None
 try:
-    face0_sensor = VEML6031x00Manager(logger, tca[0])
-    light_sensors.append(face0_sensor)
-except Exception:
-    logger.debug("WARNING!!! Light sensor 0 failed to initialize")
-    light_sensors.append(None)
-try:
-    face1_sensor = VEML6031x00Manager(logger, tca[1])
-    light_sensors.append(face1_sensor)
-except Exception:
-    logger.debug("WARNING!!! Light sensor 1 failed to initialize")
-    light_sensors.append(None)
-try:
     face2_sensor = VEML6031x00Manager(logger, tca[2])
     light_sensors.append(face2_sensor)
-except Exception:
-    logger.debug("WARNING!!! Light sensor 2 failed to initialize")
-    light_sensors.append(None)
-try:
-    face3_sensor = VEML6031x00Manager(logger, tca[3])
-    light_sensors.append(face3_sensor)
-except Exception:
-    logger.debug("WARNING!!! Light sensor 3 failed to initialize")
-    light_sensors.append(None)
-try:
-    sensor = VEML6031x00Manager(logger, tca[5])
-    light_sensors.append(sensor)
-except Exception:
-    logger.debug("WARNING!!! Light sensor 4 failed to initialize")
+    print("HEREEE")
+except Exception as e:
+    logger.debug(f"WARNING!!! Light sensor 2 failed to initialize {e}")
     light_sensors.append(None)
 
 # Magnetorquer Initializations
@@ -346,7 +329,8 @@ def test_fsm_transitions():
                 face0_sensor=face0_sensor, face1_sensor=face1_sensor,
                 face2_sensor=face2_sensor, face3_sensor=face3_sensor,
                 magnetorquer_manager=magnetorquer_manager,
-                detumbler_manager=detumbler_manager)
+                detumbler_manager=detumbler_manager,
+                PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
         beacon._fsm_obj = fsm_obj
 
         # Initially, FSM should be in bootup
@@ -432,7 +416,8 @@ def test_fsm_orient_config_change():
                 face0_sensor=face0_sensor, face1_sensor=face1_sensor,
                 face2_sensor=face2_sensor, face3_sensor=face3_sensor,
                 magnetorquer_manager=magnetorquer_manager,
-                detumbler_manager=detumbler_manager)
+                detumbler_manager=detumbler_manager,
+                PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
         
         fsm_obj.set_state("orient")
 
@@ -474,7 +459,8 @@ def test_fsm_orient_command():
                 face0_sensor=face0_sensor, face1_sensor=face1_sensor,
                 face2_sensor=face2_sensor, face3_sensor=face3_sensor,
                 magnetorquer_manager=magnetorquer_manager,
-                detumbler_manager=detumbler_manager)
+                detumbler_manager=detumbler_manager,
+                PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
         fsm_obj.set_state("orient")
         print(fsm_obj.curr_state_object.orient_payload_setting)
         print(fsm_obj.curr_state_object.orient_payload_periodic_time)
@@ -529,7 +515,8 @@ async def test_fsm_emergency_detumble():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     
     # Initially, FSM should be in bootup
@@ -564,7 +551,8 @@ async def test_fsm_detumble_max_duration():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     
     # Set these parameters artificially so that it won't ever switch to deploy prematurely
@@ -602,7 +590,8 @@ async def test_fsm_detumble_stop_conditions():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
 
     # Initially, FSM should be in bootup
@@ -644,7 +633,8 @@ async def test_fsm_detumble_stop_conditions():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
 
     # Initially, FSM should be in bootup
@@ -688,7 +678,8 @@ async def test_fsm_orient_run():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     fsm_obj.set_state("orient")
     await asyncio.sleep(10)
@@ -717,7 +708,8 @@ async def test_fsm_orient_cdh_output():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     fsm_obj.set_state("orient")
     # note you may need to adjust the sleeps
@@ -752,7 +744,8 @@ async def test_fsm_orient_above_battery():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -785,7 +778,8 @@ async def test_fsm_orient_above_battery():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -818,7 +812,8 @@ async def test_fsm_orient_above_battery():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -852,7 +847,8 @@ async def test_fsm_orient_above_battery():
             face0_sensor=face0_sensor, face1_sensor=face1_sensor,
             face2_sensor=face2_sensor, face3_sensor=face3_sensor,
             magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager)
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
     beacon._fsm_obj = fsm_obj
     # Initially, FSM should be in bootup
     fsm_obj.deployed = True
@@ -914,17 +910,16 @@ def test_i2c_scan():
     # Scan TCA9548A multiplexer channels if available
     print("\nScanning TCA9548A multiplexer channels:")
     try:
-        for i in range(len(tca.channels)):
-            channel = tca[i]
-            channel.try_lock()
-            devices = channel.scan()
-            channel.unlock()
-            if devices:
-                print(f"Channel {i}: Found {len(devices)} devices:")
-                for addr in devices:
-                    print(f"  - Device at address: 0x{addr:02X}")
-            else:
-                print(f"Channel {i}: No devices found")
+        channel = tca[2]
+        channel.try_lock()
+        devices = channel.scan()
+        channel.unlock()
+        if devices:
+            print(f"Channel 2: Found {len(devices)} devices:")
+            for addr in devices:
+                print(f"  - Device at address: 0x{addr:02X}")
+        else:
+            print(f"Channel 2: No devices found")
     except Exception as e:
         print(f"Error scanning multiplexer: {e}")
     print("\n=== I2C Scan Complete ===")
@@ -943,7 +938,7 @@ def test_all():
     #asyncio.run(test_fsm_detumble_stop_conditions()) # TESTED 
     #asyncio.run(test_fsm_orient_above_battery())     # TESTED
     #asyncio.run(test_fsm_detumble_max_duration())    # TESTED
-    #asyncio.run(test_fsm_orient_run())               # TESTED
+    #asyncio.run(test_fsm_orient_run())               # TESTED - note though this is pretty much identical to cdh output and needs execute_fsm for log to show
     #asyncio.run(test_fsm_orient_cdh_output())        # TESTED
 
     # non-fsm tests
