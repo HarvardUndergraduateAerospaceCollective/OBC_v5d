@@ -19,6 +19,7 @@ class StateOrient:
         """
         self.dp_obj = dp_obj
         self.logger = logger
+        self.orient_best_direction = "None Better That Others"
         self.tca = tca
         self.running = False
         self.done = False
@@ -68,14 +69,20 @@ class StateOrient:
         self.running = True
         in_sunlight = False
         while self.running:
+
             if self.config.orient_payload_setting == 0:
                  # don't do anything
-                 self.PAYLOAD_BATT_ENABLE.value = False
                  await asyncio.sleep(2)
+                 self.logger.info("[Orient] Payload setting set to 0")
+            elif self.PAYLOAD_BATT_ENABLE.value == False:
+                # don't do anything
+                self.logger.info("[Orient] Payload battery is disabled: PAYLOAD_BATT_ENABLE = False")
+                await asyncio.sleep(2)
             else:
                 # wait a little bit before beginning, just for stabilization
+                self.logger.info("[Orient] Payload setting set to 1")
                 await asyncio.sleep(2)
-
+                
                 # step 0: get light readings
                 # lights: [scalar, scalar, scalar, scalar]
                 try:
@@ -95,6 +102,7 @@ class StateOrient:
                 max_light = max(self.light_intensity)
                 in_sunlight = max_light > self.config.orient_light_threshold
                 if not in_sunlight:
+                    self.logger.info("[Orient] Not in sunlight.  Waiting a few minutes...")
                     # if not in sunlight, try again another read in 2 minutes
                     # wait 2 minutes to allow for quick adjustment once we're back in sunlight
                     await asyncio.sleep(2 * 60)
@@ -157,30 +165,35 @@ class StateOrient:
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = False
+                        self.orient_best_direction = "None Better That Others"
                     if self.best_direction == 0:
                         self.logger.info("Activating +X spring")
                         self.rx0.value = True
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = False
+                        self.orient_best_direction = "+X Axis"
                     if self.best_direction == 1:
                         self.logger.info("Activating -X spring")
                         self.rx0.value = False
                         self.rx1.value = True
                         self.tx0.value = False
                         self.tx1.value = False
+                        self.orient_best_direction = "-X Axis"
                     if self.best_direction == 2:
                         self.logger.info("Activating +Y spring")
                         self.rx0.value = False
                         self.rx1.value = False
                         self.tx0.value = True
                         self.tx1.value = False
+                        self.orient_best_direction = "+Y Axis"
                     if self.best_direction == 3:
                         self.logger.info("Activating -Y spring")
                         self.rx0.value = False
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = True
+                        self.orient_best_direction = "-Y Axis"
                     # set self.changed to False at the end
                     self.changed = False
 

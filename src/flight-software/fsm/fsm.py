@@ -36,6 +36,8 @@ class FSM:
         self.deployed = False
         self.orient_best_direction = "None Better That Others"
         self.orient_light_intensity = []
+        self.config = config
+        self.PAYLOAD_BATT_ENABLE = PAYLOAD_BATT_ENABLE
     
     def set_state(self, new_state_name):
         """
@@ -63,23 +65,6 @@ class FSM:
         
         # NOTE: Emergency override for low battery and power consumption is handled in main.py
 
-        if self.curr_state_name == "orient":
-            if self.curr_state_object.best_direction == -1:
-                self.orient_best_direction = "None Better That Others"
-            elif self.curr_state_object.best_direction == 0:
-                self.orient_best_direction = "+X Axis"
-            elif self.curr_state_object.best_direction == 1:
-                self.orient_best_direction = "-X Axis"
-            elif self.curr_state_object.best_direction == 2:
-                self.orient_best_direction = "+Y Axis"
-            elif self.curr_state_object.best_direction == 3:
-                self.orient_best_direction = "-Y Axis"
-            elif self.curr_state_object.best_direction == 4:
-                self.orient_best_direction = "-Z Axis"
-            self.orient_light_intensity = self.curr_state_object.light_intensity
-            self.logger.info("[FSM] orient_best_direction: " + str(self.curr_state_object.best_direction) + ", " + str(self.orient_best_direction))
-            self.logger.info("[FSM] orient_light_intensity: " + str(self.curr_state_object.light_intensity) + ", " + str(self.orient_light_intensity))
-
         # Startup → Detumble
         if self.curr_state_name == "bootup" and self.curr_state_object.is_done():
             self.set_state("detumble")
@@ -87,6 +72,8 @@ class FSM:
         
         # Emergency Detumble
         if self.dp_obj.data["data_imu_av_magnitude"] > 1:
+            # if we were coming from orient, disable power to payload immediately
+            self.PAYLOAD_BATT_ENABLE.value = False
             # Don't wait for other state to be done, shut it off immediately
             self.set_state("detumble")
             return 0
@@ -104,8 +91,26 @@ class FSM:
 
         # Deploy → Orient
         if self.curr_state_name == "deploy" and self.curr_state_object.is_done() and self.dp_obj.data["data_batt_volt"] > 6:
+            if self.config.orient_payload_setting == 0:
+                self.PAYLOAD_BATT_ENABLE.value = False
+            else:
+                self.PAYLOAD_BATT_ENABLE.value = True
             self.set_state("orient")
             return 0
         elif self.curr_state_name == "deploy" and self.curr_state_object.is_done() and self.dp_obj.data["data_batt_volt"] < 6:
             # Let the main file know we need to charge a bit more
             return -1
+        
+        # Orient Parameters
+        if self.curr_state_name == "orient":
+            # Payload enable/disable
+            if self.config.orient_payload_setting == 0:
+                self.PAYLOAD_BATT_ENABLE.value = False
+            else:
+                self.PAYLOAD_BATT_ENABLE.value = True
+
+            # Cache the best direction and light intensity
+            self.orient_best_direction = self.curr_state_object.orient_best_direction
+            self.orient_light_intensity = self.curr_state_object.light_intensity
+            self.logger.info("[FSM] orient_best_direction: " + str(self.curr_state_object.best_direction) + ", " + str(self.curr_state_object.orient_best_direction))
+            self.logger.info("[FSM] orient_light_intensity: " + str(self.curr_state_object.light_intensity))

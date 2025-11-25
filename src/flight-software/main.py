@@ -9,6 +9,10 @@ import microcontroller
 from lib.adafruit_mcp230xx.mcp23017 import MCP23017
 from lib.adafruit_tca9548a import TCA9548A
 from lib.proveskit_rp2350_v5b.register import Register
+from lib.pysquared.hardware.burnwire.manager.burnwire import BurnwireManager
+from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00Manager
+from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import MagnetorquerManager
+from lib.pysquared.detumbler_manager import DetumblerManager
 from lib.pysquared.beacon import Beacon
 from fsm.data_processes.data_process import DataProcess
 from fsm.fsm import FSM
@@ -36,6 +40,7 @@ from lib.adafruit_tca9548a import TCA9548A
 
 from version import __version__
 
+time.sleep(30 * 60)  # 30 minutes
 
 boot_time: float = time.time()
 
@@ -43,9 +48,6 @@ rtc = MicrocontrollerManager()
 
 (boot_count := Counter(index=Register.boot_count)).increment()
 error_count: Counter = Counter(index=Register.error_count)
-
-if boot_count.get() <= 3:
-    time.sleep(30 * 60)  # 30 minutes
 
 logger: Logger = Logger(
     error_counter=error_count,
@@ -127,6 +129,8 @@ async def main_async_loop():
         PAYLOAD_PWR_ENABLE = mcp.get_pin(1)
         FIRE_DEPLOY2_B = mcp.get_pin(2)
         PAYLOAD_BATT_ENABLE = mcp.get_pin(3)
+        PAYLOAD_BATT_ENABLE.direction = digitalio.Direction.OUTPUT
+        PAYLOAD_BATT_ENABLE.value = False
         RF2_IO2 = mcp.get_pin(4)
         RF2_IO1 = mcp.get_pin(5)
         RF2_IO0 = mcp.get_pin(6)
@@ -165,6 +169,54 @@ async def main_async_loop():
             SPI0_CS0,
             initialize_pin(logger, board.RF1_RST, digitalio.Direction.OUTPUT, True),
         )
+
+        # +++ START OF ADDITIONS +++ #
+        burnwire_heater_enable = initialize_pin(
+            logger, board.FIRE_DEPLOY1_A, digitalio.Direction.OUTPUT, False
+        )
+
+        burnwire1_fire = initialize_pin(
+            logger, board.FIRE_DEPLOY1_B, digitalio.Direction.OUTPUT, False
+        )
+
+        antenna_deployment = BurnwireManager(
+            logger, burnwire_heater_enable, burnwire1_fire, enable_logic=True
+        )
+
+        # Payload Pins
+        RX0_OUTPUT = initialize_pin(logger, board.RX0, digitalio.Direction.OUTPUT, False)
+        RX1_OUTPUT = initialize_pin(logger, board.RX1, digitalio.Direction.OUTPUT, False)
+        TX0_OUTPUT = initialize_pin(logger, board.TX0, digitalio.Direction.OUTPUT, False)
+        TX1_OUTPUT = initialize_pin(logger, board.TX1, digitalio.Direction.OUTPUT, False)
+
+        # Light Sensors
+        tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
+        light_sensors = []
+        face0_sensor = None
+        face1_sensor = None
+        face2_sensor = None
+        face3_sensor = None
+        try:
+            face2_sensor = VEML6031x00Manager(logger, tca[2])
+            light_sensors.append(face2_sensor)
+            print("HEREEE")
+        except Exception as e:
+            logger.debug(f"WARNING!!! Light sensor 2 failed to initialize {e}")
+            light_sensors.append(None)
+        
+        detumbler_manager = DetumblerManager(gain=1.0)
+        magnetorquer_manager = None
+        """
+        # Don't do until plugged in
+        magnetorquer_manager = MagnetorquerManager( logger=logger,
+                                                    i2c_addr        =0x5a, # TODO: DOUBLE CHECK!  this is default DRV2605 for adafruit
+                                                    addr_x_plus     =tca[0],
+                                                    addr_x_minus    =tca[1],
+                                                    addr_y_plus     =tca[2],
+                                                    addr_y_minus    =tca[3],
+                                                    addr_z_minus    =tca[4])
+        """
+        # +++ END OF ADDITIONS +++ #
 
         magnetometer = LIS2MDLManager(logger, i2c1)
 
@@ -224,8 +276,19 @@ async def main_async_loop():
         solar_power_monitor: PowerMonitorProto = INA219Manager(logger, i2c0, 0x41)
         
 
-        dp_obj = DataProcess()
-        fsm_obj = FSM(dp_obj, logger, beacon)
+        dp_obj = DataProcess(magnetometer=magnetometer,
+                        imu=imu,
+                        battery_power_monitor=battery_power_monitor)
+        fsm_obj = FSM(dp_obj,
+                logger,
+                config,
+                deployment_switch=antenna_deployment,
+                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+                face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+                face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+                magnetorquer_manager=magnetorquer_manager,
+                detumbler_manager=detumbler_manager,
+                PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
 
         def nominal_power_loop():
             logger.debug(

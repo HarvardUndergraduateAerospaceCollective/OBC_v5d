@@ -96,7 +96,7 @@ load_switch_2.enable_load()
 
 # set these to high so that we have the circuitry ready for use
 PAYLOAD_PWR_ENABLE.value = False
-PAYLOAD_BATT_ENABLE.value = True
+PAYLOAD_BATT_ENABLE.value = False
 
 SPI0_CS0 = initialize_pin(logger, board.SPI0_CS0, digitalio.Direction.OUTPUT, True)
 
@@ -185,7 +185,6 @@ face3_sensor = None
 try:
     face2_sensor = VEML6031x00Manager(logger, tca[2])
     light_sensors.append(face2_sensor)
-    print("HEREEE")
 except Exception as e:
     logger.debug(f"WARNING!!! Light sensor 2 failed to initialize {e}")
     light_sensors.append(None)
@@ -402,7 +401,7 @@ def test_fsm_orient_current():
         input("Did the wire get current? (Y/N): ").strip().upper()
     return "N/A"
 
-def test_fsm_orient_config_change():
+async def test_fsm_orient_config_change():
     choice = input("Would you like to try the orient config change test (Y/N)?: ").strip().lower()
     if choice == "y":
         dm_obj = DataProcess(magnetometer=magnetometer,
@@ -420,20 +419,17 @@ def test_fsm_orient_config_change():
                 PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
         
         fsm_obj.set_state("orient")
+        await asyncio.sleep(1)
 
+        config.update_config("orient_payload_setting", 1, temporary=True)
         print(fsm_obj.curr_state_object.orient_payload_setting)
         print(fsm_obj.curr_state_object.orient_payload_periodic_time)
-        time.sleep(1)
+        await asyncio.sleep(1)
         
         config.update_config("orient_payload_setting", 0, temporary=True)
         print(fsm_obj.curr_state_object.orient_payload_setting)
         print(fsm_obj.curr_state_object.orient_payload_periodic_time)
-        time.sleep(1)
-        
-        config.update_config("orient_payload_setting", 2, temporary=True)
-        print(fsm_obj.curr_state_object.orient_payload_setting)
-        print(fsm_obj.curr_state_object.orient_payload_periodic_time)
-        time.sleep(1)
+        await asyncio.sleep(1)
 
         config.update_config("orient_payload_periodic_time", 12, temporary=True)
         print(fsm_obj.curr_state_object.orient_payload_setting)
@@ -444,6 +440,64 @@ def test_fsm_orient_config_change():
             fsm_obj.curr_state_object.stop()
             fsm_obj.curr_state_run_asyncio_task.cancel()
         return input("Did the orient mechanism and/or period change as intended? (Y/N): ").strip().upper()
+
+async def test_fsm_orient_load_switch_change():
+    """
+    Test that the FSM immediately switches to 'detumble' when 
+    angular velocity magnitude exceeds emergency threshold.
+    """
+    choice = input("Would you like to try the orient load switch change test (Y/N)?: ").strip().lower()
+    if choice == "y":
+        dm_obj = DataProcess(magnetometer=magnetometer,
+                imu=imu,
+                battery_power_monitor=battery_power_monitor)
+        fsm_obj = FSM(dm_obj,
+                logger,
+                config,
+                deployment_switch=antenna_deployment,
+                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
+                face0_sensor=face0_sensor, face1_sensor=face1_sensor,
+                face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+                magnetorquer_manager=magnetorquer_manager,
+                detumbler_manager=detumbler_manager,
+                PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
+        
+        fsm_obj.set_state("bootup")
+        print("in bootup, enable should be False...")
+        await asyncio.sleep(1)
+        print(PAYLOAD_BATT_ENABLE.value)
+        print(fsm_obj.PAYLOAD_BATT_ENABLE.value)
+
+        fsm_obj.set_state("detumble")
+        print("\nin detumble, enable should be False...")
+        await asyncio.sleep(1)
+        print(PAYLOAD_BATT_ENABLE.value)
+        print(fsm_obj.PAYLOAD_BATT_ENABLE.value)
+
+        fsm_obj.set_state("orient")
+        print("\nnow in orient, should be True for payload setting = 1...")
+        config.update_config("orient_payload_setting", 1, temporary=True)
+        fsm_obj.execute_fsm_step()
+        await asyncio.sleep(1)
+        print(config.orient_payload_setting)
+        print(PAYLOAD_BATT_ENABLE.value)
+        print(fsm_obj.PAYLOAD_BATT_ENABLE.value)
+        print(fsm_obj.curr_state_object.PAYLOAD_BATT_ENABLE.value)
+
+        print("\nnow in orient, should be False for payload setting = 0...")
+        config.update_config("orient_payload_setting", 0, temporary=True)
+        fsm_obj.execute_fsm_step()
+        await asyncio.sleep(1)
+        print(config.orient_payload_setting)
+        print(PAYLOAD_BATT_ENABLE.value)
+        print(fsm_obj.PAYLOAD_BATT_ENABLE.value)
+        print(fsm_obj.curr_state_object.PAYLOAD_BATT_ENABLE.value)
+        
+        # Make sure to cleanup to keep effects isolated!
+        if fsm_obj.curr_state_run_asyncio_task is not None:
+            fsm_obj.curr_state_object.stop()
+            fsm_obj.curr_state_run_asyncio_task.cancel()
+        return input("Did the load switch change as intended? (Y/N): ").strip().upper()
 
 def test_fsm_orient_command():
     choice = input("Would you like to try the orient command test (Y/N)?: ").strip().lower()
@@ -499,7 +553,7 @@ def test_sband():
     print("Stopping test...")
     return
 
-async def test_fsm_emergency_detumble():
+async def test_fsm_detumble_emergency():
     """
     Test that the FSM immediately switches to 'detumble' when 
     angular velocity magnitude exceeds emergency threshold.
@@ -529,12 +583,12 @@ async def test_fsm_emergency_detumble():
     fsm_obj.execute_fsm_step()
 
     # FSM should immediately jump to detumble
-    assert fsm_obj.curr_state_name == "detumble", "\033[91mFAILED\033[0m [test_fsm_emergency_detumble: not transitioned to detumble]"
+    assert fsm_obj.curr_state_name == "detumble", "\033[91mFAILED\033[0m [test_fsm_detumble_emergency: not transitioned to detumble]"
     # Clean up asyncio task if created
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
-    print("\033[92mPASSED\033[0m [test_fsm_emergency_detumble]")
+    print("\033[92mPASSED\033[0m [test_fsm_detumble_emergency]")
 
 async def test_fsm_detumble_max_duration():
     """
@@ -570,7 +624,7 @@ async def test_fsm_detumble_max_duration():
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
-    print("\033[92mPASSED\033[0m [test_fsm_emergency_detumble]")
+    print("\033[92mPASSED\033[0m [test_fsm_detumble_emergency]")
 
 async def test_fsm_detumble_stop_conditions():
     """
@@ -660,40 +714,9 @@ async def test_fsm_detumble_stop_conditions():
         fsm_obj.curr_state_run_asyncio_task.cancel()
     print("\033[92mPASSED\033[0m [test_fsm_detumble_stop_conditions [Part 2, batt too low]]")
 
-
-async def test_fsm_orient_run():
+async def test_fsm_orient_log_output():
     """
-    Test that the orient runs through an algorithm
-    """
-
-    # part 1: test a successful stop detumble -> orient
-    dm_obj = DataProcess(magnetometer=magnetometer,
-                        imu=imu,
-                        battery_power_monitor=battery_power_monitor)
-    fsm_obj = FSM(dm_obj,
-            logger,
-            config,
-            deployment_switch=antenna_deployment,
-            tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
-            face0_sensor=face0_sensor, face1_sensor=face1_sensor,
-            face2_sensor=face2_sensor, face3_sensor=face3_sensor,
-            magnetorquer_manager=magnetorquer_manager,
-            detumbler_manager=detumbler_manager,
-            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
-    beacon._fsm_obj = fsm_obj
-    fsm_obj.set_state("orient")
-    await asyncio.sleep(10)
-    input("Is the log output acceptable? (Y/N): ").strip().upper()
-    # Clean up asyncio task if created
-    if fsm_obj.curr_state_run_asyncio_task is not None:
-        fsm_obj.curr_state_object.stop()
-        fsm_obj.curr_state_run_asyncio_task.cancel()
-    print("\033[92mPASSED\033[0m [test_fsm_orient_run]")
-
-
-async def test_fsm_orient_cdh_output():
-    """
-    Test that the orient's chosen direction gets outputted
+    Test that the FSM and the orient state both output helpful logs.
     """
 
     # part 1: test a successful stop detumble -> orient
@@ -713,20 +736,19 @@ async def test_fsm_orient_cdh_output():
     beacon._fsm_obj = fsm_obj
     fsm_obj.set_state("orient")
     # note you may need to adjust the sleeps
-    await asyncio.sleep(1)
     fsm_obj.execute_fsm_step()
-    await asyncio.sleep(1)
+    await asyncio.sleep(10)
     fsm_obj.execute_fsm_step()
-    await asyncio.sleep(1)
+    await asyncio.sleep(10)
     input("Is the log output acceptable? (Y/N): ").strip().upper()
     # Clean up asyncio task if created
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
-    print("\033[92mPASSED\033[0m [test_fsm_orient_run]")
+    print("\033[92mPASSED\033[0m [test_fsm_orient_log_output]")
 
 
-async def test_fsm_orient_above_battery():
+async def test_fsm_orient_only_above_battery():
     """
     Test that the FSM transitions from 'detumble' or 'deploy' -> 'orient' when battery is sufficient.
     More robust than test_fsm_transitions.
@@ -756,7 +778,7 @@ async def test_fsm_orient_above_battery():
     await asyncio.sleep(fsm_obj.curr_state_object.detumble_frequency + 0.1)
     fsm_obj.execute_fsm_step()
     # Now we should be in Orient
-    assert fsm_obj.curr_state_name == "orient", "\033[91mFAILED\033[0m [test_fsm_orient_above_battery]"
+    assert fsm_obj.curr_state_name == "orient", "\033[91mFAILED\033[0m [test_fsm_orient_only_above_battery]"
     # Clean up asyncio task if created
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
@@ -764,7 +786,7 @@ async def test_fsm_orient_above_battery():
     beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
-    print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 1, detumble, batt is good]]")
+    print("\033[92mPASSED\033[0m [test_fsm_orient_only_above_battery [Part 1, detumble, batt is good]]")
 
     # part 2: test a non-successful stop detumble -> orient
     dm_obj = DataProcess(magnetometer=magnetometer,
@@ -790,7 +812,7 @@ async def test_fsm_orient_above_battery():
     await asyncio.sleep(fsm_obj.curr_state_object.detumble_frequency + 0.1)
     fsm_obj.execute_fsm_step()
     # Now we should be in detumble
-    assert fsm_obj.curr_state_name == "detumble", "\033[91mFAILED\033[0m [test_fsm_orient_above_battery]"
+    assert fsm_obj.curr_state_name == "detumble", "\033[91mFAILED\033[0m [test_fsm_orient_only_above_battery]"
     # Clean up asyncio task if created
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
@@ -798,7 +820,7 @@ async def test_fsm_orient_above_battery():
     beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
-    print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 2, detumble, batt is too low]]")
+    print("\033[92mPASSED\033[0m [test_fsm_orient_only_above_battery [Part 2, detumble, batt is too low]]")
 
     # part 3: test a successful stop deploy -> orient
     dm_obj = DataProcess(magnetometer=magnetometer,
@@ -825,7 +847,7 @@ async def test_fsm_orient_above_battery():
     await asyncio.sleep(2)
     fsm_obj.execute_fsm_step()
     # Now we should be in Orient
-    assert fsm_obj.curr_state_name == "orient", "\033[91mFAILED\033[0m [test_fsm_orient_above_battery]"
+    assert fsm_obj.curr_state_name == "orient", "\033[91mFAILED\033[0m [test_fsm_orient_only_above_battery]"
     # Clean up asyncio task if created
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
@@ -833,7 +855,7 @@ async def test_fsm_orient_above_battery():
     beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
-    print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 3, deploy, batt is good]]")
+    print("\033[92mPASSED\033[0m [test_fsm_orient_only_above_battery [Part 3, deploy, batt is good]]")
 
     # part 4: test a non-successful stop deploy -> orient
     dm_obj = DataProcess(magnetometer=magnetometer,
@@ -861,7 +883,7 @@ async def test_fsm_orient_above_battery():
     fsm_obj.execute_fsm_step()
     # We should still be in deploy
     print(fsm_obj.curr_state_name, fsm_obj.curr_state_object.is_done(), fsm_obj.dp_obj.data["data_batt_volt"])
-    assert fsm_obj.curr_state_name == "deploy", "\033[91mFAILED\033[0m [test_fsm_orient_above_battery]"
+    assert fsm_obj.curr_state_name == "deploy", "\033[91mFAILED\033[0m [test_fsm_orient_only_above_battery]"
     # Clean up asyncio task if created
     if fsm_obj.curr_state_run_asyncio_task is not None:
         fsm_obj.curr_state_object.stop()
@@ -869,7 +891,7 @@ async def test_fsm_orient_above_battery():
     beacon._fsm_obj = None
     fsm_obj = None
     dm_obj = None
-    print("\033[92mPASSED\033[0m [test_fsm_orient_above_battery [Part 4, deploy, batt is too low]]")
+    print("\033[92mPASSED\033[0m [test_fsm_orient_only_above_battery [Part 4, deploy, batt is too low]]")
 
 def test_i2c_scan():
     """
@@ -928,23 +950,28 @@ def test_i2c_scan():
 # ========== MAIN FUNCTION ========== #
 
 def test_all():
-    # fsm tests
+    # ========== FSM TESTS ========== #
+    # == GENERAL == #
     #test_fsm_transitions()                           # TESTED
+    # === DEPLOY === #
     #test_fsm_deploy_burnwire()                       # TESTED - do deploy aux 1 top one (or bottom) and GND in upper right
-    #test_fsm_orient_current()                        # TESTED - do RX0, RX1, TX0, TX1 and GND in upper right
-    #test_fsm_orient_config_change()                  # TESTED                        
-    #test_fsm_orient_command()
-    #asyncio.run(test_fsm_emergency_detumble())       # TESTED 
+    # == DETUMBLE == #
+    #asyncio.run(test_fsm_detumble_emergency())       # TESTED 
     #asyncio.run(test_fsm_detumble_stop_conditions()) # TESTED 
-    #asyncio.run(test_fsm_orient_above_battery())     # TESTED
-    #asyncio.run(test_fsm_detumble_max_duration())    # TESTED
-    #asyncio.run(test_fsm_orient_run())               # TESTED - note though this is pretty much identical to cdh output and needs execute_fsm for log to show
-    #asyncio.run(test_fsm_orient_cdh_output())        # TESTED
+    #asyncio.run(test_fsm_detumble_max_duration())    # TESTED - note that you may have to edit max duration
+    # === ORIENT === #
+    #test_fsm_orient_current()                        # TESTED - do RX0, RX1, TX0, TX1 and GND in upper right
+    #asyncio.run(test_fsm_orient_only_above_battery())# TESTED
+    #asyncio.run(test_fsm_orient_load_switch_change())# TESTED
+    #asyncio.run(test_fsm_orient_config_change())     # TESTED 
+    #asyncio.run(test_fsm_orient_log_output())        # TESTED
+    #test_fsm_orient_command()
 
-    # non-fsm tests
+    # ========== NON-FSM TESTS ========== #
     #test_sband()                                    # TESTED
     #test_i2c_scan()
 
+    # ========== DM_OBJ TESTS ========== #
     # dm_obj tests
     #test_dm_obj_initialization()                     # TESTED
     #asyncio.run(test_dm_obj_get_data_updates())      # TESTED
