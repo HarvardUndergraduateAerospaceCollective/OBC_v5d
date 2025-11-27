@@ -24,8 +24,8 @@ class FSM:
         self.deployment_switch = deployment_switch
         self.state_objects = {
             "bootup"    : StateBootup(dp_obj, logger),
-            "detumble"  : StateDetumble(dp_obj, logger, tca, magnetorquer_manager, detumbler_manager),
-            "deploy"    : StateDeploy(dp_obj, logger, deployment_switch),
+            "detumble"  : StateDetumble(dp_obj, logger, config, tca, magnetorquer_manager, detumbler_manager),
+            "deploy"    : StateDeploy(dp_obj, logger, config, deployment_switch),
             "orient"    : StateOrient(dp_obj, logger, config, tca, rx0, rx1, tx0, tx1,
                                       face0_sensor, face1_sensor, face2_sensor, face3_sensor,
                                       PAYLOAD_BATT_ENABLE),
@@ -80,9 +80,9 @@ class FSM:
 
         # Detumble → Deploy
         if self.curr_state_name == "detumble" and self.curr_state_object.is_done():
-            if self.deployed and self.dp_obj.data["data_batt_volt"] > 6:
+            if self.deployed and self.dp_obj.data["data_batt_volt"] > self.config.fsm_batt_threshold_orient:
                 self.set_state("orient")
-            elif not self.deployed and self.dp_obj.data["data_batt_volt"] > 7:
+            elif not self.deployed and self.dp_obj.data["data_batt_volt"] > self.config.fsm_batt_threshold_deploy:
                 self.deployed = True
                 self.set_state("deploy")
             else:
@@ -90,14 +90,14 @@ class FSM:
                 return -1  
 
         # Deploy → Orient
-        if self.curr_state_name == "deploy" and self.curr_state_object.is_done() and self.dp_obj.data["data_batt_volt"] > 6:
+        if self.curr_state_name == "deploy" and self.curr_state_object.is_done() and self.dp_obj.data["data_batt_volt"] > self.config.fsm_batt_threshold_orient:
             if self.config.orient_payload_setting == 0:
                 self.PAYLOAD_BATT_ENABLE.value = False
             else:
                 self.PAYLOAD_BATT_ENABLE.value = True
             self.set_state("orient")
             return 0
-        elif self.curr_state_name == "deploy" and self.curr_state_object.is_done() and self.dp_obj.data["data_batt_volt"] < 6:
+        elif self.curr_state_name == "deploy" and self.curr_state_object.is_done() and self.dp_obj.data["data_batt_volt"] < self.config.fsm_batt_threshold_orient:
             # Let the main file know we need to charge a bit more
             return -1
         

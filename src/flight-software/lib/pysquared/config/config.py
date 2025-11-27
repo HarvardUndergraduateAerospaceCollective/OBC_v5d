@@ -124,6 +124,12 @@ class Config:
         self.orient_payload_periodic_time = json_data["orient_payload_periodic_time"]
         self.orient_light_threshold = json_data["orient_light_threshold"]
         self.orient_heat_duration = json_data["orient_heat_duration"]
+        self.fsm_batt_threshold_orient = json_data["fsm_batt_threshold_orient"]
+        self.fsm_batt_threshold_deploy = json_data["fsm_batt_threshold_deploy"]
+        self.deploy_burn_duration = json_data["deploy_burn_duration"]
+        self.detumble_adjust_frequency = json_data["detumble_adjust_frequency"]
+        self.detumble_stabilize_threshold = json_data["detumble_stabilize_threshold"]
+        self.detumble_max_time = json_data["detumble_max_time"]
 
         self.CONFIG_SCHEMA = {
             "cubesat_name": {"type": str, "min_length": 1, "max_length": 10},
@@ -146,9 +152,15 @@ class Config:
             "heating": {"type": bool},
             "turbo_clock": {"type": bool},
             "orient_payload_setting": {"type" : int},
-            "orient_payload_periodic_time": {"type" : int},
-            "orient_light_threshold": {"type" : int},
-            "orient_heat_duration": {"type" : int}
+            "orient_payload_periodic_time": {"type" : float},
+            "orient_light_threshold": {"type" : float},
+            "orient_heat_duration": {"type" : float},
+            "fsm_batt_threshold_orient": {"type" : float},
+            "fsm_batt_threshold_deploy": {"type" : float},
+            "deploy_burn_duration": {"type" : float},
+            "detumble_adjust_frequency": {"type" : float},
+            "detumble_stabilize_threshold": {"type" : float},
+            "detumble_max_time": {"type" : float},
         }
 
     # validates values from input

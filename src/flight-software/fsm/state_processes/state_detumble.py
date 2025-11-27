@@ -11,7 +11,7 @@ from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import Magnetorque
 
 # ++++++++++++++ Functions: Helper ++++++++++++++ #
 class StateDetumble:
-    def __init__(self, dp_obj, logger, 
+    def __init__(self, dp_obj, logger, config,
                  tca, magnetorquer_manager, detumbler_manager):
         """
         Initialize the class object
@@ -20,9 +20,7 @@ class StateDetumble:
         self.logger = logger
         self.running = False
         self.done = False
-        self.detumble_frequency = 5 # in seconds; how long to wait between data reads
-        self.detumble_threshold = 0.05
-        self.max_time = 5400        # 90 minutes to try and stabilize
+        self.config = config
         self.start_time = None
         self.magnetorquer_manager : MagnetorquerManager | None = magnetorquer_manager                          
         self.detumbler_manager = detumbler_manager
@@ -35,7 +33,7 @@ class StateDetumble:
         self.start_time = time.monotonic() 
 
         while self.running:
-            await asyncio.sleep(self.detumble_frequency)
+            await asyncio.sleep(self.config.detumble_adjust_frequency)
 
             # Pull data from dp_obj
             mag_field = self.dp_obj.data["data_magnetometer_vector"]
@@ -44,7 +42,7 @@ class StateDetumble:
 
             # Check for timeout
             elapsed_time = time.monotonic() - self.start_time
-            if elapsed_time >= self.max_time:
+            if elapsed_time >= self.config.detumble_max_time:
                 self.logger.info(f"[FSM: Detumble] Timeout after {elapsed_time:.1f} seconds, curr ang_vel_mag: {ang_vel_mag}")
                 self.done = True
                 break
@@ -56,7 +54,7 @@ class StateDetumble:
                 self.logger.info(note1) if mag_field is None else self.logger.info(note2)
                 continue
             # If Ang Vel is sufficintly stabilized, return
-            if ang_vel_mag < self.detumble_threshold:
+            if ang_vel_mag < self.config.detumble_stabilize_threshold:
                 self.logger.info("[FSM: Detumble] Ang Vel Sufficiently Stabilized")
                 self.done = True
                 continue

@@ -23,7 +23,6 @@ class StateBootup:
         Run the deployment sequence asynchronously
         """
         self.running = True
-        # TODO: wait 30 minutes
         await asyncio.sleep(5)
         self.done = True
 

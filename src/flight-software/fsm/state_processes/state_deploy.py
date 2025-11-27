@@ -8,14 +8,14 @@ import asyncio
 
 # ++++++++++++++ Functions: Helper ++++++++++++++ #
 class StateDeploy:
-    def __init__(self, dp_obj, logger, deployment_switch):
+    def __init__(self, dp_obj, logger, config, deployment_switch):
         """
         Initialize the class object
         """
         self.dp_obj = dp_obj
         self.logger = logger
+        self.config = config
         self.deployment_switch = deployment_switch
-        self.burn_duration = 5
         self.finished_burn = False
         self.running = False
         self.done = False
@@ -29,7 +29,7 @@ class StateDeploy:
             await asyncio.sleep(1)
             # Burn the wire if not already done to release the antennas
             if not self.finished_burn:
-                self.deployment_switch.burn(5)
+                self.deployment_switch.burn(self.config.deploy_burn_duration)
                 await asyncio.sleep(4)
                 self.finished_burn = True
             self.done = True

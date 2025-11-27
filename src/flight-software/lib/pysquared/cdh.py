@@ -47,6 +47,12 @@ class CommandDataHandler:
     command_change_orient_payload_periodic_time: str = "orient_payload_periodic_time"
     command_change_orient_light_threshold: str = "orient_light_threshold"
     command_change_orient_heat_duration: str = "orient_heat_duration"
+    command_change_fsm_batt_threshold_orient : str = "fsm_batt_threshold_orient"
+    command_change_fsm_batt_threshold_deploy : str = "fsm_batt_threshold_deploy"
+    command_change_deploy_burn_duration : str = "deploy_burn_duration"
+    command_change_detumble_adjust_frequency : str = "detumble_adjust_frequency"
+    command_change_detumble_stabilize_threshold : str = "detumble_stabilize_threshold"
+    command_change_detumble_max_time : str = "detumble_max_time"
     
     oscar_password: str = "Hello World!"  # Default password for OSCAR commands
 
@@ -259,6 +265,19 @@ class CommandDataHandler:
                 self.change_orient_light_threshold(args)
             elif cmd == self.command_change_orient_heat_duration:
                 self.change_orient_heat_duration(args)
+            elif cmd == self.command_change_fsm_batt_threshold_orient:
+                self.change_fsm_batt_threshold_orient(args)
+            elif cmd == self.command_change_fsm_batt_threshold_deploy:
+                self.change_fsm_batt_threshold_deploy(args)
+            elif cmd == self.command_change_deploy_burn_duration:
+                self.change_deploy_burn_duration(args)
+            elif cmd == self.command_change_detumble_adjust_frequency:
+                self.change_detumble_adjust_frequency(args)
+            elif cmd == self.command_change_detumble_stabilize_threshold:
+                self.change_detumble_stabilize_threshold(args)
+            elif cmd == self.command_change_detumble_max_time:
+                self.change_detumble_max_time(args)
+
             elif cmd == self.command_reset:
                 self.reset()
             elif cmd == self.command_change_radio_modulation:
@@ -336,7 +355,7 @@ class CommandDataHandler:
         Args:
             args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
         """
-        orient_payload_periodic_time = 24
+        orient_payload_periodic_time = self._config.orient_payload_periodic_time
 
         if len(args) < 1:
             self._log.warning("No payload periodic time specified")
@@ -347,7 +366,7 @@ class CommandDataHandler:
             )
             return
 
-        orient_payload_periodic_time = int(args[0])
+        orient_payload_periodic_time = float(args[0])
 
         try:
             self._config.update_config("orient_payload_periodic_time", orient_payload_periodic_time, temporary=False)
@@ -367,7 +386,7 @@ class CommandDataHandler:
         Args:
             args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
         """
-        orient_light_threshold = 10
+        orient_light_threshold = self._config.orient_light_threshold
 
         if len(args) < 1:
             self._log.warning("No light threshold time specified")
@@ -378,7 +397,7 @@ class CommandDataHandler:
             )
             return
 
-        orient_light_threshold = int(args[0])
+        orient_light_threshold = float(args[0])
 
         try:
             self._config.update_config("orient_light_threshold", orient_light_threshold, temporary=False)
@@ -398,7 +417,7 @@ class CommandDataHandler:
         Args:
             args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
         """
-        orient_heat_duration = 10
+        orient_heat_duration = self._config.orient_heat_duration
 
         if len(args) < 1:
             self._log.warning("No orient heat duration specified")
@@ -409,7 +428,7 @@ class CommandDataHandler:
             )
             return
 
-        orient_heat_duration = int(args[0])
+        orient_heat_duration = float(args[0])
 
         try:
             self._config.update_config("orient_heat_duration", orient_heat_duration, temporary=False)
@@ -421,6 +440,196 @@ class CommandDataHandler:
             self._log.error("Failed to change orient heat duration", err=e)
             self._packet_manager.send(
                 f"Failed to change orient heat duration: {e}".encode("utf-8")
+            )
+
+    def change_fsm_batt_threshold_orient(self, args: list[str]) -> None:
+        """Changes the battery threshold for orienting.
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        fsm_batt_threshold_orient = self._config.fsm_batt_threshold_orient
+
+        if len(args) < 1:
+            self._log.warning("No orient battery threshold specified")
+            self._packet_manager.send(
+                "No orient battery threshold specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        fsm_batt_threshold_orient = float(args[0])
+
+        # OK if too high- will be ignored
+
+        try:
+            self._config.update_config("fsm_batt_threshold_orient", fsm_batt_threshold_orient, temporary=False)
+            self._log.info("Orient battery threshold changed")
+            self._packet_manager.send(
+                f"Orient battery threshold changed: {fsm_batt_threshold_orient}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change orient battery threshold", err=e)
+            self._packet_manager.send(
+                f"Failed to change orient battery threshold changed: {e}".encode("utf-8")
+            )
+
+    def change_fsm_batt_threshold_deploy(self, args: list[str]) -> None:
+        """Changes the battery threshold for deploy.
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        fsm_batt_threshold_deploy = self._config.fsm_batt_threshold_deploy
+
+        if len(args) < 1:
+            self._log.warning("No deploy battery threshold specified")
+            self._packet_manager.send(
+                "No deploy battery threshold specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        fsm_batt_threshold_deploy = float(args[0])
+
+        # OK if too high- will be ignored
+
+        try:
+            self._config.update_config("fsm_batt_threshold_deploy", fsm_batt_threshold_deploy, temporary=False)
+            self._log.info("Deploy battery threshold changed")
+            self._packet_manager.send(
+                f"Deploy battery threshold changed: {fsm_batt_threshold_deploy}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change deploy battery threshold", err=e)
+            self._packet_manager.send(
+                f"Failed to change deploy battery threshold changed: {e}".encode("utf-8")
+            )
+
+    def change_deploy_burn_duration(self, args: list[str]) -> None:
+        """Changes the burn duration for deploy (in seconds).
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        deploy_burn_duration = self._config.deploy_burn_duration
+
+        if len(args) < 1:
+            self._log.warning("No deploy burn duration specified")
+            self._packet_manager.send(
+                "No deploy burn duration specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        deploy_burn_duration = float(args[0])
+
+        try:
+            self._config.update_config("deploy_burn_duration", deploy_burn_duration, temporary=False)
+            self._log.info("Deploy burn duration changed")
+            self._packet_manager.send(
+                f"Deploy burn duration changed: {deploy_burn_duration}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change deploy burn duration", err=e)
+            self._packet_manager.send(
+                f"Failed to change deploy burn duration: {e}".encode("utf-8")
+            )
+
+    def change_detumble_adjust_frequency(self, args: list[str]) -> None:
+        """Changes the adjustment frequency for detumble (in seconds).
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        detumble_adjust_frequency = self._config.detumble_adjust_frequency
+
+        if len(args) < 1:
+            self._log.warning("No detumble_adjust_frequency specified")
+            self._packet_manager.send(
+                "No detumble_adjust_frequency specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        detumble_adjust_frequency = float(args[0])
+
+        try:
+            self._config.update_config("detumble_adjust_frequency", detumble_adjust_frequency, temporary=False)
+            self._log.info("Detumble adjust frequency changed")
+            self._packet_manager.send(
+                f"Detumble adjust frequency changed: {detumble_adjust_frequency}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change detumble adjust frequency", err=e)
+            self._packet_manager.send(
+                f"Failed to change detumble adjust frequency: {e}".encode("utf-8")
+            )
+
+    def change_detumble_stabilize_threshold(self, args: list[str]) -> None:
+        """Changes the stabilize threshold for detumble (based on angular velocity magnitude)
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        detumble_stabilize_threshold = self._config.detumble_stabilize_threshold
+
+        if len(args) < 1:
+            self._log.warning("No detumble stabilize threshold specified")
+            self._packet_manager.send(
+                "No detumble stabilize threshold specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        detumble_stabilize_threshold = float(args[0])
+
+        try:
+            self._config.update_config("detumble_stabilize_threshold", detumble_stabilize_threshold, temporary=False)
+            self._log.info("Detumble stabilize threshold changed")
+            self._packet_manager.send(
+                f"Detumble stabilize threshold changed: {detumble_stabilize_threshold}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change detumble stabilize threshold", err=e)
+            self._packet_manager.send(
+                f"Failed to change detumble stabilize threshold: {e}".encode("utf-8")
+            )
+
+    def change_detumble_max_time(self, args: list[str]) -> None:
+        """Changes the max time for detumble (in seconds).
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        detumble_max_time = self._config.detumble_max_time
+
+        if len(args) < 1:
+            self._log.warning("No detumble max time specified")
+            self._packet_manager.send(
+                "No detumble max time specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        detumble_max_time = float(args[0])
+
+        try:
+            self._config.update_config("detumble_max_time", detumble_max_time, temporary=False)
+            self._log.info("Detumble max time changed")
+            self._packet_manager.send(
+                f"Detumble max time changed: {detumble_max_time}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change detumble max time", err=e)
+            self._packet_manager.send(
+                f"Failed to change detumble max time: {e}".encode("utf-8")
             )
 
     def reset(self) -> None:
