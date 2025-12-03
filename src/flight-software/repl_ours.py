@@ -183,10 +183,34 @@ face1_sensor = None
 face2_sensor = None
 face3_sensor = None
 try:
+    face0_sensor = VEML6031x00Manager(logger, tca[0])
+    light_sensors.append(face0_sensor)
+except Exception as e:
+    logger.debug(f"WARNING!!! Light sensor 0 failed to initialize {e}")
+    light_sensors.append(None)
+try:
+    face1_sensor = VEML6031x00Manager(logger, tca[1])
+    light_sensors.append(face1_sensor)
+except Exception as e:
+    logger.debug(f"WARNING!!! Light sensor 1 failed to initialize {e}")
+    light_sensors.append(None)
+try:
     face2_sensor = VEML6031x00Manager(logger, tca[2])
     light_sensors.append(face2_sensor)
 except Exception as e:
     logger.debug(f"WARNING!!! Light sensor 2 failed to initialize {e}")
+    light_sensors.append(None)
+try:
+    face3_sensor = VEML6031x00Manager(logger, tca[3])
+    light_sensors.append(face3_sensor)
+except Exception as e:
+    logger.debug(f"WARNING!!! Light sensor 3 failed to initialize {e}")
+    light_sensors.append(None)
+try:
+    face4_sensor = VEML6031x00Manager(logger, tca[4])
+    light_sensors.append(face4_sensor)
+except Exception as e:
+    logger.debug(f"WARNING!!! Light sensor 4 failed to initialize {e}")
     light_sensors.append(None)
 
 # Magnetorquer Initializations
@@ -553,6 +577,27 @@ def test_sband():
     print("Stopping test...")
     return
 
+def test_uhf():
+    input("Are you ready to test the UHF radio?").strip().upper()
+    message = {"command": "ping"}
+    print("Sending Ping Command...")
+    uhf_packet_manager.send(json.dumps(message).encode("utf-8"))
+    count = 0
+    result = "N"
+    while count < 10:
+        count += 1
+        b = uhf_packet_manager.listen(1)
+        time.sleep(1)
+        uhf_packet_manager.send(json.dumps(message).encode("utf-8"))
+        if b is not None:
+            if b != b"ACK":
+                print("Received not ACK :")
+            else:
+                print("Received ACK response:", b.decode("utf-8"))
+                result = "Y"
+                break
+    return result
+
 async def test_fsm_detumble_emergency():
     """
     Test that the FSM immediately switches to 'detumble' when 
@@ -746,6 +791,44 @@ async def test_fsm_orient_log_output():
         fsm_obj.curr_state_object.stop()
         fsm_obj.curr_state_run_asyncio_task.cancel()
     print("\033[92mPASSED\033[0m [test_fsm_orient_log_output]")
+
+
+async def test_fsm_orient_light_sensors():
+    """
+    Test that the light sensors are giving off light.
+    """
+    inp = input("Do you want to test the light sensor?: ").strip().upper()
+    if inp == "Y":
+        input("Cover the light sensor at face 0.  Press enter when ready.").strip().upper()
+        print(face0_sensor.get_light(), face0_sensor.get_lux())
+        input("Shine a the light sensor at face 0.  Press enter when ready.").strip().upper()
+        print(face0_sensor.get_light(), face0_sensor.get_lux())
+        input("Is this what you expected?").strip().upper()
+
+        input("Cover the light sensor at face 1.  Press enter when ready.").strip().upper()
+        print(face1_sensor.get_light(), face1_sensor.get_lux())
+        input("Shine a the light sensor at face 1.  Press enter when ready.").strip().upper()
+        print(face1_sensor.get_light(), face1_sensor.get_lux())
+        input("Is this what you expected?").strip().upper()
+
+        input("Cover the light sensor at face 2.  Press enter when ready.").strip().upper()
+        print(face2_sensor.get_light(), face2_sensor.get_lux())
+        input("Shine a the light sensor at face 2.  Press enter when ready.").strip().upper()
+        print(face2_sensor.get_light(), face2_sensor.get_lux())
+        input("Is this what you expected?").strip().upper()
+
+        input("Cover the light sensor at face 3.  Press enter when ready.").strip().upper()
+        print(face3_sensor.get_light(), face3_sensor.get_lux())
+        input("Shine a the light sensor at face 3.  Press enter when ready.").strip().upper()
+        print(face3_sensor.get_light(), face3_sensor.get_lux())
+        input("Is this what you expected?").strip().upper()
+
+        input("Cover the light sensor at face 4.  Press enter when ready.").strip().upper()
+        print(face4_sensor.get_light(), face4_sensor.get_lux())
+        input("Shine a the light sensor at face 4.  Press enter when ready.").strip().upper()
+        print(face4_sensor.get_light(), face4_sensor.get_lux())
+        input("Is this what you expected?").strip().upper()
+    print("\033[92mPASSED\033[0m [test_fsm_orient_light_sensors]")
 
 
 async def test_fsm_orient_only_above_battery():
@@ -965,10 +1048,12 @@ def test_all():
     #asyncio.run(test_fsm_orient_load_switch_change())# TESTED
     #asyncio.run(test_fsm_orient_config_change())     # TESTED 
     #asyncio.run(test_fsm_orient_log_output())        # TESTED
+    #test_fsm_orient_light_sensors()
     #test_fsm_orient_command()
 
     # ========== NON-FSM TESTS ========== #
     #test_sband()                                    # TESTED
+    #test_uhf()
     #test_i2c_scan()
 
     # ========== DM_OBJ TESTS ========== #
