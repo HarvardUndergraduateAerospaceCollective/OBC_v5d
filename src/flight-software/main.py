@@ -313,7 +313,7 @@ async def main_async_loop():
             while True:
                 # TODO(nateinaction): Modify behavior based on power state
                 val = fsm_obj.execute_fsm_step() # added
-                if val == -1 or fsm_obj.dp_obj["data_batt_volt"] <= 5:
+                if val == -1 or fsm_obj.dp_obj["data_batt_volt"] <= config.critical_battery_voltage:
                     print("battery too low.  Sleeping for 1 minute.")
                     await safe_sleep_async(
                         duration=60,            # sleep 1 minute

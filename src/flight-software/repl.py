@@ -431,7 +431,7 @@ async def test_fsm_orient_config_change():
         print(fsm_obj.curr_state_object.orient_payload_periodic_time)
         await asyncio.sleep(1)
 
-        config.update_config("orient_payload_periodic_time", 12, temporary=True)
+        config.update_config("orient_payload_periodic_time", 12.0, temporary=True)
         print(fsm_obj.curr_state_object.orient_payload_setting)
         print(fsm_obj.curr_state_object.orient_payload_periodic_time)
         
@@ -656,11 +656,11 @@ async def test_fsm_detumble_stop_conditions():
 
     # Now we should be in Detumble
     assert(fsm_obj.curr_state_name == "detumble")
-    # So that the detumble trigger gets done, set arbitrarily to 7.5 and 0.02 (< 0.05)
-    fsm_obj.dp_obj.data["data_batt_volt"] = 7.5
-    fsm_obj.dp_obj.data["data_imu_av_magnitude"] = 0.02
+    # So that the detumble trigger gets done, set both battery/imu within the thresholds
+    fsm_obj.dp_obj.data["data_batt_volt"] = config.fsm_batt_threshold_deploy + 0.1
+    fsm_obj.dp_obj.data["data_imu_av_magnitude"] = config.detumble_stabilize_threshold - 0.1
     # Wait a little so that it execute detumble
-    await asyncio.sleep(fsm_obj.curr_state_object.detumble_frequency + 0.1)
+    await asyncio.sleep(config.detumble_adjust_frequency + 1)
     fsm_obj.execute_fsm_step()
 
     # Now we should be in Deploy
@@ -699,11 +699,11 @@ async def test_fsm_detumble_stop_conditions():
 
     # Now we should be in Detumble
     assert(fsm_obj.curr_state_name == "detumble")
-    # So that the detumble trigger gets done, set to 5 (low) and 0.02 (< 0.05)
-    fsm_obj.dp_obj.data["data_batt_volt"] = 5
-    fsm_obj.dp_obj.data["data_imu_av_magnitude"] = 0.02
+    # So that the detumble trigger gets done, set battery to too low
+    fsm_obj.dp_obj.data["data_batt_volt"] = config.fsm_batt_threshold_deploy - 0.1
+    fsm_obj.dp_obj.data["data_imu_av_magnitude"] = config.detumble_stabilize_threshold - 0.2
     # Wait a little so that it execute detumble
-    await asyncio.sleep(fsm_obj.curr_state_object.detumble_frequency + 0.1)
+    await asyncio.sleep(config.detumble_adjust_frequency + 0.1)
     fsm_obj.execute_fsm_step()
 
     # We should STILL be in Detumble
@@ -775,7 +775,7 @@ async def test_fsm_orient_only_above_battery():
     assert(fsm_obj.curr_state_name == "detumble")
     # Wait a little so that it execute detumble
     fsm_obj.dp_obj.data["data_batt_volt"] = 7
-    await asyncio.sleep(fsm_obj.curr_state_object.detumble_frequency + 0.1)
+    await asyncio.sleep(config.detumble_adjust_frequency + 0.1)
     fsm_obj.execute_fsm_step()
     # Now we should be in Orient
     assert fsm_obj.curr_state_name == "orient", "\033[91mFAILED\033[0m [test_fsm_orient_only_above_battery]"
@@ -809,7 +809,7 @@ async def test_fsm_orient_only_above_battery():
     assert(fsm_obj.curr_state_name == "detumble")
     # Wait a little so that it execute detumble
     fsm_obj.dp_obj.data["data_batt_volt"] = 5
-    await asyncio.sleep(fsm_obj.curr_state_object.detumble_frequency + 0.1)
+    await asyncio.sleep(config.detumble_adjust_frequency + 0.1)
     fsm_obj.execute_fsm_step()
     # Now we should be in detumble
     assert fsm_obj.curr_state_name == "detumble", "\033[91mFAILED\033[0m [test_fsm_orient_only_above_battery]"

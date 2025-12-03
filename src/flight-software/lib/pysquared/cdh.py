@@ -44,6 +44,7 @@ class CommandDataHandler:
     command_send_joke: str = "send_joke"
     command_get_counter: str = "get_counter"
     command_orient_payload: str = "orient_payload"
+    command_orient_payload_setting: str = "orient_payload_setting"
     command_change_orient_payload_periodic_time: str = "orient_payload_periodic_time"
     command_change_orient_light_threshold: str = "orient_light_threshold"
     command_change_orient_heat_duration: str = "orient_heat_duration"
@@ -259,6 +260,8 @@ class CommandDataHandler:
 
             if cmd == self.command_orient_payload:
                 self.set_orient_payload(args)
+            elif cmd == self.command_orient_payload_setting:
+                self.change_orient_payload_setting(args)
             elif cmd == self.command_change_orient_payload_periodic_time:
                 self.change_orient_payload_periodic_time(args)
             elif cmd == self.command_change_orient_light_threshold:
@@ -347,6 +350,37 @@ class CommandDataHandler:
             self._log.error("Failed to change radio modulation", err=e)
             self._packet_manager.send(
                 f"Failed to change radio modulation: {e}".encode("utf-8")
+            )
+
+    def change_orient_payload_setting(self, args: list[str]) -> None:
+        """Changes the orient payload setting.
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        orient_payload_setting = self._config.orient_payload_setting
+
+        if len(args) < 1:
+            self._log.warning("No orient payload setting specified")
+            self._packet_manager.send(
+                "No orient payload setting specified. Please provide an integer, 1 or 0.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        orient_payload_setting = int(args[0])
+
+        try:
+            self._config.update_config("orient_payload_setting", orient_payload_setting, temporary=False)
+            self._log.info("Orient payload setting changed")
+            self._packet_manager.send(
+                f"Orient payload setting time changed: {orient_payload_setting}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change orient periodic time", err=e)
+            self._packet_manager.send(
+                f"Failed to change orient periodic time: {e}".encode("utf-8")
             )
 
     def change_orient_payload_periodic_time(self, args: list[str]) -> None:
