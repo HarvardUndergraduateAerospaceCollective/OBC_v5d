@@ -54,7 +54,7 @@ class DataProcess():
         Get battery voltage (bv)
         """
         while self.running:
-            voltage = self.protos_power_monitor.get_bus_voltage().value
+            voltage = self.protos_power_monitor.get_bus_voltage()._value
             self.data["data_batt_volt"] = voltage
             await asyncio.sleep(1)
 
