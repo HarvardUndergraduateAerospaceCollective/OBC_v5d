@@ -257,21 +257,21 @@ magnetorquer_manager = MagnetorquerManager( logger=logger,
 
 
 # +++++++++++++ READ SENSORS +++++++++++++ #
-
-# Light Sensors
-if face0_sensor is not None:
-    print("[LIGHT_SENSOR_FACE0] Light, Lux:\t", face0_sensor.get_light()._value, face0_sensor.get_lux()._value)
-if face1_sensor is not None:
-    print("[LIGHT_SENSOR_FACE1] Light, Lux:\t", face1_sensor.get_light()._value, face1_sensor.get_lux()._value)
-if face2_sensor is not None:
-    print("[LIGHT_SENSOR_FACE2] Light, Lux:\t", face2_sensor.get_light()._value, face2_sensor.get_lux()._value)
-if face3_sensor is not None:
-    print("[LIGHT_SENSOR_FACE3] Light, Lux:\t", face3_sensor.get_light()._value, face3_sensor.get_lux()._value)
-# Battery Sensor
-print("[BATTERY SENSOR] Voltage:\t", battery_power_monitor.get_bus_voltage()._value)
-# IMU Sensor
-print("[IMU] Acceleration: \t\t", imu.get_acceleration().value)
-print("[IMU] Angular Velocity: \t", imu.get_angular_velocity().value)
-# Magnetometer Sensor
-print("[MAGNETOMETER] Magnetic Field: \t", magnetometer.get_magnetic_field().value)
-
+while True:
+    # Light Sensors
+    if face0_sensor is not None:
+        print("[LIGHT_SENSOR_FACE0] Light, Lux:\t", face0_sensor.get_light()._value, face0_sensor.get_lux()._value)
+    if face1_sensor is not None:
+        print("[LIGHT_SENSOR_FACE1] Light, Lux:\t", face1_sensor.get_light()._value, face1_sensor.get_lux()._value)
+    if face2_sensor is not None:
+        print("[LIGHT_SENSOR_FACE2] Light, Lux:\t", face2_sensor.get_light()._value, face2_sensor.get_lux()._value)
+    if face3_sensor is not None:
+        print("[LIGHT_SENSOR_FACE3] Light, Lux:\t", face3_sensor.get_light()._value, face3_sensor.get_lux()._value)
+    # Battery Sensor
+    print("[BATTERY SENSOR] Voltage:\t", battery_power_monitor.get_bus_voltage()._value)
+    # IMU Sensor
+    print("[IMU] Acceleration: \t\t", imu.get_acceleration().value)
+    print("[IMU] Angular Velocity: \t", imu.get_angular_velocity().value)
+    # Magnetometer Sensor
+    print("[MAGNETOMETER] Magnetic Field: \t", magnetometer.get_magnetic_field().value)
+    time.sleep(5)
