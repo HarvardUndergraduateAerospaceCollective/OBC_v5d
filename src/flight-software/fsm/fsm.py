@@ -21,7 +21,10 @@ class FSM:
                  ):
         self.dp_obj = dp_obj    # object of type DataProcess
         self.logger = logger    # logging status of FSM states
+        self.config = config
         self.deployment_switch = deployment_switch
+        self.PAYLOAD_BATT_ENABLE = PAYLOAD_BATT_ENABLE
+
         self.state_objects = {
             "bootup"    : StateBootup(dp_obj, logger),
             "detumble"  : StateDetumble(dp_obj, logger, config, tca, magnetorquer_manager, detumbler_manager),
@@ -33,11 +36,11 @@ class FSM:
         self.curr_state_name = "bootup"
         self.curr_state_object = self.state_objects["bootup"]
         self.curr_state_run_asyncio_task = asyncio.create_task(self.curr_state_object.run())
+
         self.deployed = False
         self.orient_best_direction = "None Better That Others"
         self.orient_light_intensity = []
-        self.config = config
-        self.PAYLOAD_BATT_ENABLE = PAYLOAD_BATT_ENABLE
+        
     
     def set_state(self, new_state_name):
         """
@@ -71,7 +74,7 @@ class FSM:
             return 0
         
         # Emergency Detumble
-        if self.dp_obj.data["data_imu_av_magnitude"] > 1:
+        if self.dp_obj.data["data_imu_av_magnitude"] > self.config.detumble_stabilize_threshold * 1.5: # some added-buffer to not trigger this too much, only in emergency
             # if we were coming from orient, disable power to payload immediately
             self.PAYLOAD_BATT_ENABLE.value = False
             # Don't wait for other state to be done, shut it off immediately

@@ -71,11 +71,21 @@ class StateOrient:
         while self.running:
 
             if self.config.orient_payload_setting == 0:
-                 # don't do anything
-                 await asyncio.sleep(2)
-                 self.logger.info("[Orient] Payload setting set to 0")
+                # don't do anything
+                # set all pins for false for sanity
+                self.rx0.value = False
+                self.rx1.value = False
+                self.tx0.value = False
+                self.tx1.value = False
+                self.logger.info("[Orient] Payload setting set to 0")
+                await asyncio.sleep(2)
             elif self.PAYLOAD_BATT_ENABLE.value == False:
                 # don't do anything
+                # set all pins for false for sanity
+                self.rx0.value = False
+                self.rx1.value = False
+                self.tx0.value = False
+                self.tx1.value = False
                 self.logger.info("[Orient] Payload battery is disabled: PAYLOAD_BATT_ENABLE = False")
                 await asyncio.sleep(2)
             else:
@@ -86,11 +96,11 @@ class StateOrient:
                 # step 0: get light readings
                 # lights: [scalar, scalar, scalar, scalar]
                 try:
-                    light1 = self.face0_sensor.get_light() if self.face0_sensor is not None else Light(0.0)
-                    light2 = self.face1_sensor.get_light() if self.face1_sensor is not None else Light(0.0)
-                    light3 = self.face2_sensor.get_light() if self.face2_sensor is not None else Light(0.0)
-                    light4 = self.face3_sensor.get_light() if self.face3_sensor is not None else Light(0.0)
-                    lights = [light1, light2, light3, light4]
+                    light0 = self.face0_sensor.get_light() if self.face0_sensor is not None else Light(0.0)
+                    light1 = self.face1_sensor.get_light() if self.face1_sensor is not None else Light(0.0)
+                    light2 = self.face2_sensor.get_light() if self.face2_sensor is not None else Light(0.0)
+                    light3 = self.face3_sensor.get_light() if self.face3_sensor is not None else Light(0.0)
+                    lights = [light0, light1, light2, light3]
                 # if fail, set all to 0
                 except Exception as e:
                     self.logger.debug(f"Failed to read light sensors: {e}")
@@ -102,53 +112,24 @@ class StateOrient:
                 max_light = max(self.light_intensity)
                 in_sunlight = max_light > self.config.orient_light_threshold
                 if not in_sunlight:
-                    self.logger.info("[Orient] Not in sunlight.  Waiting a few minutes...")
+                    self.logger.info("[Orient] Threshold not exceeded, not in sunlight.  Waiting two minutes...")
                     # if not in sunlight, try again another read in 2 minutes
                     # wait 2 minutes to allow for quick adjustment once we're back in sunlight
                     await asyncio.sleep(2 * 60)
                 else:
-                    # step 2: create light vectors
-                    # light_vec: [v1, v2, v3, v4]
-                    pos_xvec = [1, 0]
-                    neg_xvec = [-1, 0]
-                    pos_yvec = [0, 1]
-                    neg_yvec = [0, -1]
-                    lightvecs = [pos_xvec, neg_xvec, pos_yvec, neg_yvec]
+                    # step 2: get the index of the face from which we saw the max light
+                    # see if this face is different from last time
+                    best_direction_index = self.light_intensity.index(max(self.light_intensity))
+                    if self.best_direction != best_direction_index:
+                        self.changed = True
+                    self.best_direction = best_direction_index
 
-                    # step 3: weight the light vectors by the light reading
-                    light_vec = [[0.0, 0.0] for _ in range(4)]
-                    for i in range(4):
-                        light_vec[i] = self.vector_mul_scalar(lightvecs[i], lights[i]._value)
-
-                    # step 4: compute the norm sum of the weighted light vectors, net_vec is the sun vector magnitude
-                    # lightvecs is list of vectors, lights is list of scalars
-                    weighted_vecs = [self.vector_mul_scalar(lightvecs[i], lights[i]._value) for i in range(4)]
-                    net_vec = [0.0, 0.0]
-                    for v in weighted_vecs:
-                        net_vec = self.vector_add(net_vec, v)
-
-                    # step 5: determine all the directions from which to pull
-                    # either east, west, north, or south
-                    point_vecs = [[1,0], [-1,0], [0,1], [0,-1]]
+                    # step 3: log results
+                    self.logger.info(f"[Orient] Best Dir Index {self.best_direction}")
+                    self.logger.info(f"[Orient] All X/Y Light Readings: {self.light_intensity}")
                     
-                    # step 6: find best alginment
-                    # find maximum dot product between net_vec and point_vecs
-                    max_dot_product = -float('inf')
-                    for i in range(4):
-                        dot_product = sum([a * b for a, b in zip(net_vec, point_vecs[i])])
-                        if dot_product > max_dot_product:
-                            max_dot_product = dot_product
-                            if self.best_direction != -i:
-                                self.changed = True
-                            self.best_direction = i
-
-                    # step 7: log the results
-                    self.logger.info(f"Sun vector: {net_vec}")
-                    self.logger.info(f"Best direction: {self.best_direction}, Alignment: {max_dot_product:.3f}")
-                    
-                    # activate the spring corresponding to best_direction
+                    # step 4: activate the spring corresponding to best_direction
                     # Direction mapping:
-                        # -1: none actuated
                         # 0: +X
                         # 1: -X
                         # 2: +Y
@@ -159,13 +140,6 @@ class StateOrient:
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = False
-                    if self.best_direction == -1:
-                        self.logger.info("No current through any springs")
-                        self.rx0.value = False
-                        self.rx1.value = False
-                        self.tx0.value = False
-                        self.tx1.value = False
-                        self.orient_best_direction = "None Better That Others"
                     if self.best_direction == 0:
                         self.logger.info("Activating +X spring")
                         self.rx0.value = True

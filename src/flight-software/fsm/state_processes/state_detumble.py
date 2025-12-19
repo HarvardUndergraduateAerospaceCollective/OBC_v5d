@@ -33,6 +33,10 @@ class StateDetumble:
         self.start_time = time.monotonic() 
 
         while self.running:
+            # stop the dipole from the previous run, if there was one
+            if self.magnetorquer_manager:
+                self.magnetorquer_manager.stop_dipole_moments()
+            # let it settle for the adjust frequency
             await asyncio.sleep(self.config.detumble_adjust_frequency)
 
             # Pull data from dp_obj
@@ -42,16 +46,17 @@ class StateDetumble:
 
             # Check for timeout
             elapsed_time = time.monotonic() - self.start_time
-            if elapsed_time >= self.config.detumble_max_time:
+            if elapsed_time >= self.config.detumble_max_time * 60:
                 self.logger.info(f"[FSM: Detumble] Timeout after {elapsed_time:.1f} seconds, curr ang_vel_mag: {ang_vel_mag}")
                 self.done = True
                 break
-
-            # Verify data is present, if not, skip calculations
-            if mag_field is None or ang_vel_mag is None:
-                note1 = "[FSM: Detumble] Waiting on Mag Field"
-                note2 = "[FSM: Detumble] Waiting on Ang Vel"
-                self.logger.info(note1) if mag_field is None else self.logger.info(note2)
+            # If you know mag field but not ang vel, just let it pass
+            if mag_field is not None and ang_vel_mag is None:
+                self.logger.info("[FSM: Detumble] Ang Vel is None, Mag Field is not None.")
+                continue
+            # If you know ang vel but not mag field, just turn one face on to experiment
+            if mag_field is None or ang_vel_mag is not None:
+                self.logger.info("[FSM: Detumble] Mag Field is None, Ang Vel is not None.")
                 continue
             # If Ang Vel is sufficintly stabilized, return
             if ang_vel_mag < self.config.detumble_stabilize_threshold:
@@ -70,6 +75,8 @@ class StateDetumble:
             # Send result to magnetorquer
             if self.magnetorquer_manager:
                 self.magnetorquer_manager.set_dipole_moment(dipole_vector)
+                # let it run for the adjust frequency
+                await asyncio.sleep(self.config.detumble_adjust_frequency)
 
     def stop(self):
         """

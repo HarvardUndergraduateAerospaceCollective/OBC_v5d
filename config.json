@@ -15,9 +15,9 @@
   "orient_heat_duration": 10.0,
   "fsm_batt_threshold_orient": 6.0,
   "fsm_batt_threshold_deploy": 7.0,
-  "deploy_burn_duration": 10.0,
-  "detumble_adjust_frequency": 2.0,
-  "detumble_stabilize_threshold": 0.5,
+  "deploy_burn_duration": 15.0,
+  "detumble_adjust_frequency": 2.0,    
+  "detumble_stabilize_threshold": 0.2,
   "detumble_max_time": 90.0,
 
   "joke_reply": [

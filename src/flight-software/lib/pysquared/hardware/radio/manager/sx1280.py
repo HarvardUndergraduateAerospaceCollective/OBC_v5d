@@ -154,7 +154,7 @@ class SX1280Manager(BaseRadioManager):
         Raises:
             NotImplementedError: If not implemented by subclass.
         """
-        return -1 # placeholder value
+        return 0 # placeholder value
 
     def get_max_packet_size(self) -> int:
         """Gets the maximum packet size supported by the radio.

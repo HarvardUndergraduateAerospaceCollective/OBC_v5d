@@ -40,6 +40,7 @@ class CommandDataHandler:
     """Handles command parsing, validation, and execution for the satellite."""
 
     command_reset: str = "reset"
+    command_exec: str = "exec"
     command_change_radio_modulation: str = "change_radio_modulation"
     command_send_joke: str = "send_joke"
     command_get_counter: str = "get_counter"
@@ -280,7 +281,8 @@ class CommandDataHandler:
                 self.change_detumble_stabilize_threshold(args)
             elif cmd == self.command_change_detumble_max_time:
                 self.change_detumble_max_time(args)
-
+            elif cmd == self.command_exec:
+                self.exec_command(args)
             elif cmd == self.command_reset:
                 self.reset()
             elif cmd == self.command_change_radio_modulation:
@@ -722,3 +724,48 @@ class CommandDataHandler:
         except ValueError as e:
             self._log.error("Failed to change orient modulation", err=e)
         self._packet_manager.send(f"New feature executed with args: {args}".encode("utf-8"))
+    
+    def exec_command(self, args: list[str]) -> None:
+        """Executes arbitrary Python code sent from the ground station.
+        
+        Args:
+            args: A list of arguments, where all items joined together form the Python code to execute.
+        
+        Warning:
+            This is potentially dangerous as it allows execution of any code.
+            Use with extreme caution in production environments.
+        """
+        if len(args) < 1:
+            self._log.warning("No code specified for execution")
+            self._packet_manager.send(
+                "No code specified for execution.".encode("utf-8")
+            )
+            return
+        
+        code_to_execute = " ".join(args)
+        self._log.info("Executing code", code=code_to_execute)
+        
+        try:
+            # Create a string buffer to capture output
+            import io
+            import sys
+            original_stdout = sys.stdout
+            captured_output = io.StringIO()
+            sys.stdout = captured_output
+            
+            # Execute the code
+            exec(code_to_execute)
+            
+            # Restore stdout and get the output
+            sys.stdout = original_stdout
+            output = captured_output.getvalue()
+            
+            self._log.info("Code executed successfully")
+            self._packet_manager.send(
+                f"Code executed successfully. Output:\n{output}".encode("utf-8")
+            )
+        except Exception as e:
+            self._log.error("Failed to execute code", err=e)
+            self._packet_manager.send(
+                f"Failed to execute code: {str(e)}".encode("utf-8")
+            )

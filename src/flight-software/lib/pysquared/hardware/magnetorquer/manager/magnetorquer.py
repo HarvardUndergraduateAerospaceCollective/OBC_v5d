@@ -134,6 +134,14 @@ class MagnetorquerManager(MagnetorquerProto):
             raise HardwareInitializationError(
                 "Failed to initialize magnetorquer DRV2605 drivers"
             ) from e
+        
+    def stop_dipole_moments(self) -> None:
+        """ To conserve battery, set all the DRVs to 0. """
+        self._drv_x_minus.realtime_value = 0
+        self._drv_x_plus.realtime_value = 0
+        self._drv_y_minus.realtime_value = 0
+        self._drv_y_plus.realtime_value = 0
+        self._drv_z_minus.realtime_value = 0
 
     def set_dipole_moment(self, dipole_moment: tuple[float, float, float]) -> None:
         """Set the magnetic dipole moment for all three axes.
