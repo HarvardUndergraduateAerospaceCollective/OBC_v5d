@@ -364,6 +364,7 @@ async def main_async_loop():
         dp_obj = DataProcess(magnetometer=magnetometer,
                         imu=imu,
                         battery_power_monitor=battery_power_monitor)
+        dp_obj.start_run_all_data()
         fsm_obj = FSM(dp_obj,
                 logger,
                 config,
@@ -413,7 +414,7 @@ async def main_async_loop():
             logger.info("Entering main loop")
             while True:
                 val = fsm_obj.execute_fsm_step()
-                if val == -1 or fsm_obj.dp_obj.data["data_batt_volt"] <= -1: # config.critical_battery_voltage:
+                if val == -1 or fsm_obj.dp_obj.data["data_batt_volt"] <= config.critical_battery_voltage:
                     print("battery too low.  Sleeping for 1 minute.")
                     await safe_sleep_async(
                         duration=1,            # sleep 1 minute
@@ -423,7 +424,7 @@ async def main_async_loop():
                         max_sleep=300           # max 5 minutes at once
                     )
                 await asyncio.sleep(0)          
-                watchdog.pet()                  
+                watchdog.pet()
                 nominal_power_loop()
 
         except Exception as e:

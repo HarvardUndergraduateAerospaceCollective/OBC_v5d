@@ -140,6 +140,13 @@ class StateOrient:
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = False
+                    if self.best_direction == -1:
+                        self.logger.info("None better than others, due to light sensors not on.")
+                        self.rx0.value = False
+                        self.rx1.value = False
+                        self.tx0.value = False
+                        self.tx1.value = False
+                        self.orient_best_direction = "None Better That Others"
                     if self.best_direction == 0:
                         self.logger.info("Activating +X spring")
                         self.rx0.value = True

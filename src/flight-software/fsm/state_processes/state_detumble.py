@@ -48,14 +48,14 @@ class StateDetumble:
             elapsed_time = time.monotonic() - self.start_time
             if elapsed_time >= self.config.detumble_max_time * 60:
                 self.logger.info(f"[FSM: Detumble] Timeout after {elapsed_time:.1f} seconds, curr ang_vel_mag: {ang_vel_mag}")
-                self.done = True
+                self.done = True 
                 break
             # If you know mag field but not ang vel, just let it pass
             if mag_field is not None and ang_vel_mag is None:
                 self.logger.info("[FSM: Detumble] Ang Vel is None, Mag Field is not None.")
                 continue
             # If you know ang vel but not mag field, just turn one face on to experiment
-            if mag_field is None or ang_vel_mag is not None:
+            if mag_field is None and ang_vel_mag is not None:
                 self.logger.info("[FSM: Detumble] Mag Field is None, Ang Vel is not None.")
                 continue
             # If Ang Vel is sufficintly stabilized, return
