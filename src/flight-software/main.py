@@ -46,6 +46,8 @@ error_count: Counter = Counter(index=Register.error_count)
 
 deployed_count: Counter = Counter(index=Register.deployed_count)
 
+except_reset_count: Counter = Counter(index=Register.except_reset_count)
+
 # only sleep if not yet deployed OR if booted less than 3 times (as a cut-off)
 if deployed_count == 0 or boot_count.get() <= 2:
     time.sleep(30 * 60)
@@ -113,10 +115,10 @@ async def main_async_loop():
 
         # ++++++++++++ INIT Watchdog ++++++++++++ #
         watchdog = Watchdog(logger, board.WDT_WDI)
-        watchdog.pet()
 
 
         # ++++++++++++ INIT SPI/I2C ++++++++++++ #
+        watchdog.pet()
         SPI0_CS0 = initialize_pin(logger, board.SPI0_CS0, digitalio.Direction.OUTPUT, True)
 
         SPI1_CS0 = initialize_pin(logger, board.SPI1_CS0, digitalio.Direction.OUTPUT, True)
@@ -149,10 +151,9 @@ async def main_async_loop():
             board.SPI1_MISO,
         )
 
-        watchdog.pet()
-
 
         # ++++++++++++ INIT MCP ++++++++++++ #
+        watchdog.pet()
         mcp = MCP23017(i2c1)
 
         # GPB
@@ -168,10 +169,9 @@ async def main_async_loop():
         PAYLOAD_BATT_ENABLE.value = False
         RF2_IO0 = mcp.get_pin(6)
 
-        watchdog.pet()
-
 
         # ++++++++++++ INIT RADIOS ++++++++++++ #
+        watchdog.pet()
         try:
             sband_radio = SX1280Manager(
                 logger,
@@ -185,8 +185,11 @@ async def main_async_loop():
                 initialize_pin(logger, board.RF2_RX_EN, digitalio.Direction.OUTPUT, False),
             )
         except Exception as e:
+            sband_radio = None
             logger.debug(f"[WARNING] SX1280Manager Failed to initialize: {e}")
-            await asyncio.sleep(30)
+            if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                except_reset_count.increment()
+                time.sleep(config.watchdog_reset_sleep)
         try:
             uhf_radio = RFM9xManager(
                 logger,
@@ -196,9 +199,14 @@ async def main_async_loop():
                 initialize_pin(logger, board.RF1_RST, digitalio.Direction.OUTPUT, True),
             )
         except Exception as e:
+            uhf_radio = None
             logger.debug(f"[WARNING] RFM9xManager Failed to initialize: {e}")
-            await asyncio.sleep(30)
+            if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                except_reset_count.increment()
+                time.sleep(config.watchdog_reset_sleep)
         try:
+            if uhf_radio is None:
+                raise ValueError("uhf_radio is None")
             uhf_packet_manager = PacketManager(
                 logger,
                 uhf_radio,
@@ -207,13 +215,15 @@ async def main_async_loop():
                 0.2,
             )
         except Exception as e:
+            uhf_packet_manager = None
             logger.debug(f"[WARNING] PacketManager Failed to initialize: {e}")
-            await asyncio.sleep(30)
-
-        watchdog.pet()
-
+            if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                except_reset_count.increment()
+                time.sleep(config.watchdog_reset_sleep)
+        time.sleep(5)
 
         # ++++++++++++ INIT BURNWIRE ++++++++++++ #
+        watchdog.pet()
         burnwire_heater_enable = initialize_pin(
             logger, board.FIRE_DEPLOY1_A, digitalio.Direction.OUTPUT, False
         )
@@ -227,21 +237,20 @@ async def main_async_loop():
                 logger, burnwire_heater_enable, burnwire1_fire, enable_logic=True
             )
         except Exception as e:
+            antenna_deployment = None
             logger.debug(f"[WARNING] BurnwireManager Failed to initialize: {e}")
-
-        watchdog.pet()
 
 
         # ++++++++++++ INIT PAYLOAD ++++++++++++ #
+        watchdog.pet()
         RX0_OUTPUT = initialize_pin(logger, board.RX0, digitalio.Direction.OUTPUT, False)
         RX1_OUTPUT = initialize_pin(logger, board.RX1, digitalio.Direction.OUTPUT, False)
         TX0_OUTPUT = initialize_pin(logger, board.TX0, digitalio.Direction.OUTPUT, False)
         TX1_OUTPUT = initialize_pin(logger, board.TX1, digitalio.Direction.OUTPUT, False)
 
-        watchdog.pet()
-
 
         # +++++++++ INIT LIGHT SENSORS +++++++++ #
+        watchdog.pet()
         tca = TCA9548A(i2c0, address=int(0x77))
         light_sensors = []
         face0_sensor = None
@@ -279,6 +288,16 @@ async def main_async_loop():
             logger.debug(f"[WARNING] Light sensor 4 failed to initialize {e}")
             light_sensors.append(None)
 
+        def all_faces_off():
+            """
+            This function turns off all of the faces. Note the load switches are enabled low.
+            """
+            FACE0_ENABLE.value = False
+            FACE1_ENABLE.value = False
+            FACE2_ENABLE.value = False
+            FACE3_ENABLE.value = False
+            FACE4_ENABLE.value = False
+
         def all_faces_on():
             """
             This function turns on all of the faces. Note the load switches are enabled high.
@@ -297,13 +316,13 @@ async def main_async_loop():
         mux_reset.value = True
         tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
 
-        watchdog.pet()
-
 
         # +++++++++ INIT DETUMBLER/MAGNETORUQER/IMU +++++++++ #
+        watchdog.pet()
         try:
             detumbler_manager = DetumblerManager(gain=1.0)
         except Exception as e:
+            detumbler_manager = None
             logger.debug(f"[WARNING] DetumblerManager Failed to initialize: {e}")
         try:
             magnetorquer_manager = MagnetorquerManager( logger=logger,
@@ -319,48 +338,76 @@ async def main_async_loop():
         try:
             magnetometer = LIS2MDLManager(logger, i2c1)
         except Exception as e:
+            magnetometer = None
             logger.debug(f"[WARNING] LIS2MDLManager Failed to initialize: {e}")
         try:
             imu = LSM6DSOXManager(logger, i2c1, 0x6B)
         except Exception as e:
+            imu = None
             logger.debug(f"[WARNING] LSM6DSOXManager Failed to initialize: {e}")
-
-        watchdog.pet()
-
-
-        # +++++++++ INIT BATTERY MONITOR +++++++++ #
-        try:
-            battery_power_monitor: PowerMonitorProto = INA219Manager(logger, i2c0, 0x40)
-        except Exception as e:
-            logger.debug(f"[WARNING] INA219Manager Failed to initialize: {e}")
-            microcontroller.reset()
 
 
         # +++++++++ INIT CDH/BEACON +++++++++ #
+        watchdog.pet()
         try:
+            if uhf_packet_manager is None:
+                raise ValueError("uhf_packet_manager is None")
             cdh = CommandDataHandler(logger, config, uhf_packet_manager, jokes_config)
         except Exception as e:
+            cdh = None
             logger.debug(f"[WARNING] CommandDataHandler Failed to initialize: {e}")
-            await asyncio.sleep(30)
+            if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                except_reset_count.increment()
+                time.sleep(config.watchdog_reset_sleep)
+        time.sleep(5)
         try:
+            if uhf_packet_manager is None:
+                raise ValueError("beacon init, uhf_packet_manager is None")
+            if uhf_radio is None:
+                raise ValueError("beacon init, uhf_radio is None")
+            if sband_radio is None:
+                raise ValueError("beacon init, sband_radio is None")
+            if imu is None:
+                raise ValueError("beacon init, imu is None")
+            if magnetometer is None:
+                raise ValueError("beacon init, magnetometer is None")
             beacon = Beacon(
                 logger,
                 config.cubesat_name,
                 uhf_packet_manager,
                 time.monotonic(),
+                None,
                 imu,
                 magnetometer,
                 uhf_radio,
                 sband_radio,
             )
         except Exception as e:
+            beacon = None
             logger.debug(f"[WARNING] Beacon Failed to initialize: {e}")
-            await asyncio.sleep(30)
+            if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                except_reset_count.increment()
+                time.sleep(config.watchdog_reset_sleep)
+        
 
-        watchdog.pet()
+        # +++++++++ INIT BATTERY MONITOR +++++++++ #
+        try:
+            if cdh:
+                try:
+                    cdh.listen_for_commands(10)
+                except Exception as e:
+                    logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
+            battery_power_monitor = INA219Manager(logger, i2c0, 0x40)
+        except Exception as e:
+            battery_power_monitor = None
+            logger.debug(f"[WARNING] INA219Manager Failed to initialize: {e}")
+            if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                except_reset_count.increment()
+                microcontroller.reset()
         
         
         # +++++++++ INIT DP OBJ AND FSM +++++++++ #
+        watchdog.pet()
         dp_obj = DataProcess(magnetometer=magnetometer,
                         imu=imu,
                         battery_power_monitor=battery_power_monitor)
@@ -375,10 +422,8 @@ async def main_async_loop():
                 magnetorquer_manager=magnetorquer_manager,
                 detumbler_manager=detumbler_manager,
                 PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
-        
-        beacon._fsm_obj = fsm_obj
-
-        watchdog.pet()
+        if beacon:
+            beacon._fsm_obj = fsm_obj
 
         def nominal_power_loop():
             logger.debug(
@@ -386,44 +431,57 @@ async def main_async_loop():
                 bytes_remaining=gc.mem_free(),
             )
 
-            all_faces_on()
+            all_faces_on() 
 
             try:
-                uhf_packet_manager.send(config.radio.license.encode("utf-8"))
+                if uhf_packet_manager:
+                    uhf_packet_manager.send(config.radio.license.encode("utf-8"))
             except Exception as e:
                 logger.debug(f"[WARNING] uhf_packet_manager failed to send: {e}")
-                time.sleep(30) # trigger Watchdog hard reset
-
-            beacon.send()
-
+                # trigger Watchdog hard reset
+                if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                    except_reset_count.increment()
+                    time.sleep(config.watchdog_reset_sleep)
+            
+            if beacon:
+                beacon.send()
+ 
             try:
-                cdh.listen_for_commands(10)
+                if cdh:
+                    cdh.listen_for_commands(10) if cdh is not None else None
             except Exception as e:
                 logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
-                time.sleep(30) # trigger Watchdog hard reset
+                # trigger Watchdog hard reset
+                if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                    except_reset_count.increment()
+                    time.sleep(config.watchdog_reset_sleep)
 
-            beacon.send()
+            if beacon:
+                beacon.send()
 
             try:
-                cdh.listen_for_commands(config.sleep_duration)
+                if cdh:
+                    cdh.listen_for_commands(10) if cdh is not None else None
             except Exception as e:
                 logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
-                time.sleep(30) # trigger Watchdog hard reset
+                # trigger Watchdog hard reset
+                if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                    except_reset_count.increment()
+                    time.sleep(config.watchdog_reset_sleep)
 
         try:
             logger.info("Entering main loop")
             while True:
                 val = fsm_obj.execute_fsm_step()
                 if val == -1 or fsm_obj.dp_obj.data["data_batt_volt"] <= config.critical_battery_voltage:
-                    print("battery too low.  Sleeping for 1 minute.")
                     await safe_sleep_async(
-                        duration=1,            # sleep 1 minute
+                        duration=60,
                         watchdog=watchdog,
                         logger=logger,
                         watchdog_timeout=15,
-                        max_sleep=300           # max 5 minutes at once
+                        max_sleep=300
                     )
-                await asyncio.sleep(0)          
+                await asyncio.sleep(1)
                 watchdog.pet()
                 nominal_power_loop()
 

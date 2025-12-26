@@ -162,4 +162,4 @@ class SX1280Manager(BaseRadioManager):
         Returns:
             The maximum packet size in bytes.
         """
-        return 255  # according to SX 1280 data sheet
+        return 252  # according to SX 1280 data sheet

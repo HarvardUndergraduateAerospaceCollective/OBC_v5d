@@ -54,10 +54,6 @@ class StateDetumble:
             if mag_field is not None and ang_vel_mag is None:
                 self.logger.info("[FSM: Detumble] Ang Vel is None, Mag Field is not None.")
                 continue
-            # If you know ang vel but not mag field, just turn one face on to experiment
-            if mag_field is None and ang_vel_mag is not None:
-                self.logger.info("[FSM: Detumble] Mag Field is None, Ang Vel is not None.")
-                continue
             # If Ang Vel is sufficintly stabilized, return
             if ang_vel_mag < self.config.detumble_stabilize_threshold:
                 self.logger.info("[FSM: Detumble] Ang Vel Sufficiently Stabilized")
@@ -66,6 +62,8 @@ class StateDetumble:
             # If Ang Vel is not stable, compute dipole
             # This is the quantity you want your magnetorquers to generate to stabilize CubeSAT
             try:
+                if self.detumbler_manager is None:
+                    raise ValueError("detumbler_manager is None")
                 dipole_vector = tuple(self.detumbler_manager.magnetorquer_dipole(tuple(mag_field), tuple(ang_vel_tuple)))
             except Exception as e:
                 # most likely a divison by 0, which can happen if the numbers are small
@@ -74,7 +72,12 @@ class StateDetumble:
                 dipole_vector = (0.0,0.0,0.0)
             # Send result to magnetorquer
             if self.magnetorquer_manager:
-                self.magnetorquer_manager.set_dipole_moment(dipole_vector)
+                set_z_high = False
+                # set Z high if we don't only have the magnetic field
+                if mag_field is None and ang_vel_mag is not None:
+                    self.logger.info("[FSM: Detumble] Mag Field is None, Ang Vel is not None, setting -Z to high (127).")
+                    set_z_high = True
+                self.magnetorquer_manager.set_dipole_moment(dipole_vector, set_z_high)
                 # let it run for the adjust frequency
                 await asyncio.sleep(self.config.detumble_adjust_frequency)
 

@@ -130,6 +130,8 @@ class Config:
         self.detumble_adjust_frequency = json_data["detumble_adjust_frequency"]
         self.detumble_stabilize_threshold = json_data["detumble_stabilize_threshold"]
         self.detumble_max_time = json_data["detumble_max_time"]
+        self.watchdog_reset_sleep = json_data["watchdog_reset_sleep"]
+        self.except_reset_allowed_attemps = json_data["except_reset_allowed_attemps"]
 
         self.CONFIG_SCHEMA = {
             "cubesat_name": {"type": str, "min_length": 1, "max_length": 10},
@@ -161,6 +163,8 @@ class Config:
             "detumble_adjust_frequency": {"type" : float},
             "detumble_stabilize_threshold": {"type" : float},
             "detumble_max_time": {"type" : float},
+            "watchdog_reset_sleep": {"type" : int},
+            "except_reset_allowed_attemps": {"type" : int},
         }
 
     # validates values from input

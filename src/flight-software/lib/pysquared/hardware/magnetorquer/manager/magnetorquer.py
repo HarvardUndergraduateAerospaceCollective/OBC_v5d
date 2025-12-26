@@ -143,7 +143,7 @@ class MagnetorquerManager(MagnetorquerProto):
         self._drv_y_plus.realtime_value = 0
         self._drv_z_minus.realtime_value = 0
 
-    def set_dipole_moment(self, dipole_moment: tuple[float, float, float]) -> None:
+    def set_dipole_moment(self, dipole_moment: tuple[float, float, float], set_z_high: bool) -> None:
         """Set the magnetic dipole moment for all three axes.
 
         The dipole moment is achieved by controlling the current through each coil
@@ -155,6 +155,7 @@ class MagnetorquerManager(MagnetorquerProto):
             dipole_moment: A tuple containing the dipole moment for each axis (x, y, z) in A⋅m².
                           Positive values actuate the positive face, negative values actuate
                           the negative face.
+            set_z_high: if we don't have the magnetic field, we'll artifically set Z to high. 
 
         Raises:
             ValueError: If any dipole moment exceeds the maximum achievable value.
@@ -198,6 +199,10 @@ class MagnetorquerManager(MagnetorquerProto):
 
             # Set Z-axis current (only Z- face, so negate the sign for proper direction)
             z_value = self._current_to_drv_value(-z_current, self._coil_max_current_z)
+            # if we don't have magnetic field, set z_value to artifically high
+            # set it to the max value that the DRV can take, 127
+            if set_z_high:
+                z_value = 127
             self._drv_z_minus.realtime_value = z_value
 
         except ValueError:

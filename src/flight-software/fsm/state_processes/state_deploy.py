@@ -29,7 +29,8 @@ class StateDeploy:
             await asyncio.sleep(1)
             # Burn the wire if not already done to release the antennas
             if not self.finished_burn:
-                self.deployment_switch.burn(self.config.deploy_burn_duration)
+                if self.deployment_switch:
+                    self.deployment_switch.burn(self.config.deploy_burn_duration)
                 await asyncio.sleep(4)
                 self.finished_burn = True
             self.done = True

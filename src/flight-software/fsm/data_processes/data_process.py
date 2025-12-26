@@ -54,7 +54,10 @@ class DataProcess():
         Get battery voltage (bv)
         """
         while self.running:
-            voltage = self.protos_power_monitor.get_bus_voltage()._value
+            if self.protos_power_monitor is None:
+                voltage = 8
+            else:
+                voltage = self.protos_power_monitor.get_bus_voltage()._value
             self.data["data_batt_volt"] = voltage
             await asyncio.sleep(1)
 
@@ -63,30 +66,33 @@ class DataProcess():
         Get data_imu_av and data_imu_av_magnitude
         """
         while self.running:
-            imu_acc_data = list(self.protos_imu.get_angular_velocity().value)
-            self.data["data_imu_av"] = imu_acc_data
-            # compute the magnitude of angular velocity
-            ωx, ωy, ωz = imu_acc_data
-            magnitude = (ωx**2 + ωy**2 + ωz**2) ** 0.5
-            self.data["data_imu_av_magnitude"] = magnitude
-            await asyncio.sleep(1)
-    
+            if self.protos_imu:
+                imu_acc_data = list(self.protos_imu.get_angular_velocity().value)
+                self.data["data_imu_av"] = imu_acc_data
+                # compute the magnitude of angular velocity
+                ωx, ωy, ωz = imu_acc_data
+                magnitude = (ωx**2 + ωy**2 + ωz**2) ** 0.5
+                self.data["data_imu_av_magnitude"] = magnitude
+                await asyncio.sleep(1)
+        
     async def get_data_imu_acc(self):
         """
         Get imu acceleration
         """
         while self.running:
-            imu_acc_data = list(self.protos_imu.get_acceleration().value)
-            self.data["data_imu_acc"] = imu_acc_data
-            await asyncio.sleep(1)
+            if self.protos_imu:
+                imu_acc_data = list(self.protos_imu.get_acceleration().value)
+                self.data["data_imu_acc"] = imu_acc_data
+                await asyncio.sleep(1)
 
     async def get_data_magnetometer_vector(self):
         """
         Get magnetometer vector
         """
         while self.running:
-            magnetometer_data = list(self.protos_magnetometer.get_magnetic_field().value)
-            self.data["data_magnetometer_vector"] = magnetometer_data
-            await asyncio.sleep(1)
+            if self.protos_magnetometer:
+                magnetometer_data = list(self.protos_magnetometer.get_magnetic_field().value)
+                self.data["data_magnetometer_vector"] = magnetometer_data
+                await asyncio.sleep(1)
 
     
