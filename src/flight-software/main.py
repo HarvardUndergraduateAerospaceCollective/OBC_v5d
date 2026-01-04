@@ -49,7 +49,7 @@ deployed_count: Counter = Counter(index=Register.deployed_count)
 except_reset_count: Counter = Counter(index=Register.except_reset_count)
 
 # only sleep if not yet deployed OR if booted less than 3 times (as a cut-off)
-if deployed_count == 0 or boot_count.get() <= 2:
+if deployed_count.get() > 200 or boot_count.get() <= 2:
     time.sleep(30 * 60)
 
 
