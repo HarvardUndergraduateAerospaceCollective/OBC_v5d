@@ -55,6 +55,8 @@ class CommandDataHandler:
     command_change_detumble_adjust_frequency : str = "detumble_adjust_frequency"
     command_change_detumble_stabilize_threshold : str = "detumble_stabilize_threshold"
     command_change_detumble_max_time : str = "detumble_max_time"
+    command_change_critical_battery_voltage : str = "critical_battery_voltage"
+    command_change_degraded_battery_voltage : str = "degraded_battery_voltage"
     
     oscar_password: str = "Hello World!"  # Default password for OSCAR commands
 
@@ -281,6 +283,10 @@ class CommandDataHandler:
                 self.change_detumble_stabilize_threshold(args)
             elif cmd == self.command_change_detumble_max_time:
                 self.change_detumble_max_time(args)
+            elif cmd == self.command_change_critical_battery_voltage:
+                self.change_critical_battery_voltage(args)
+            elif cmd == self.command_change_degraded_battery_voltage:
+                self.change_degraded_battery_voltage(args)
             elif cmd == self.command_exec:
                 self.exec_command(args)
             elif cmd == self.command_reset:
@@ -666,6 +672,68 @@ class CommandDataHandler:
             self._log.error("Failed to change detumble max time", err=e)
             self._packet_manager.send(
                 f"Failed to change detumble max time: {e}".encode("utf-8")
+            )
+    
+    def change_critical_battery_voltage(self, args: list[str]) -> None:
+        """Changes the critical battery voltage (in Watts)
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        critical_battery_voltage = self._config.critical_battery_voltage
+
+        if len(args) < 1:
+            self._log.warning("No critical battery voltage specified")
+            self._packet_manager.send(
+                "No critical battery voltage specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        critical_battery_voltage = float(args[0])
+
+        try:
+            self._config.update_config("critical_battery_voltage", critical_battery_voltage, temporary=False)
+            self._log.info("Critical battery voltage changed")
+            self._packet_manager.send(
+                f"Critical battery voltage changed: {critical_battery_voltage}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change critical battery voltage", err=e)
+            self._packet_manager.send(
+                f"Failed to change critical battery voltage: {e}".encode("utf-8")
+            )
+    
+    def change_degraded_battery_voltage(self, args: list[str]) -> None:
+        """Changes the degraded battery voltage (in Watts)
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        degraded_battery_voltage = self._config.degraded_battery_voltage
+
+        if len(args) < 1:
+            self._log.warning("No degraded battery voltage specified")
+            self._packet_manager.send(
+                "No degraded battery voltage specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        degraded_battery_voltage = float(args[0])
+
+        try:
+            self._config.update_config("degraded_battery_voltage", degraded_battery_voltage, temporary=False)
+            self._log.info("Degraded battery voltage changed")
+            self._packet_manager.send(
+                f"Degraded battery voltage changed: {degraded_battery_voltage}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change degraded battery voltage", err=e)
+            self._packet_manager.send(
+                f"Failed to change degraded battery voltage: {e}".encode("utf-8")
             )
 
     def reset(self) -> None:

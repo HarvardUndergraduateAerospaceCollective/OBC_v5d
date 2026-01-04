@@ -48,10 +48,6 @@ deployed_count: Counter = Counter(index=Register.deployed_count)
 
 except_reset_count: Counter = Counter(index=Register.except_reset_count)
 
-# only sleep if not yet deployed OR if booted less than 3 times (as a cut-off)
-if deployed_count.get() == 0 or boot_count.get() <= 2:
-    time.sleep(30 * 60)
-
 
 # +++++++++++++ LOGGER + CONFIGS +++++++++++++ #
 logger: Logger = Logger(
@@ -115,6 +111,15 @@ async def main_async_loop():
 
         # ++++++++++++ INIT Watchdog ++++++++++++ #
         watchdog = Watchdog(logger, board.WDT_WDI)
+
+
+        # ++++++++++++ SLEEP 30 Minutes ++++++++++++ #
+        # only sleep if not yet deployed OR if booted less than 3 times (as a cut-off)
+        if deployed_count.get() == 0 or boot_count.get() <= 2:
+            logger.info("[INFO] Sleeping for 30 minutes...")
+            for _ in range (120):
+                time.sleep(15)
+                watchdog.pet()
 
 
         # ++++++++++++ INIT SPI/I2C ++++++++++++ #
@@ -257,6 +262,7 @@ async def main_async_loop():
         face1_sensor = None
         face2_sensor = None
         face3_sensor = None
+        face4_sensor = None
         try:
             face0_sensor = VEML6031x00Manager(logger, tca[0])
             light_sensors.append(face0_sensor)
@@ -419,6 +425,7 @@ async def main_async_loop():
                 tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
                 face0_sensor=face0_sensor, face1_sensor=face1_sensor,
                 face2_sensor=face2_sensor, face3_sensor=face3_sensor,
+                face4_sensor=face4_sensor,
                 magnetorquer_manager=magnetorquer_manager,
                 detumbler_manager=detumbler_manager,
                 PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)

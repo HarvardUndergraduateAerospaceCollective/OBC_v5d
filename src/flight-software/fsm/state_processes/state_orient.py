@@ -11,7 +11,7 @@ from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00M
 class StateOrient:
     def __init__(self, dp_obj, logger, config, 
                  tca, rx0, rx1, tx0, tx1,
-                 face0_sensor, face1_sensor, face2_sensor, face3_sensor,
+                 face0_sensor, face1_sensor, face2_sensor, face3_sensor, face4_sensor,
                  PAYLOAD_BATT_ENABLE
                  ):
         """
@@ -35,8 +35,10 @@ class StateOrient:
         self.face1_sensor : VEML6031x00Manager | None = face1_sensor
         self.face2_sensor : VEML6031x00Manager | None = face2_sensor
         self.face3_sensor : VEML6031x00Manager | None = face3_sensor
+        self.face4_sensor : VEML6031x00Manager | None = face4_sensor
 
         self.light_intensity = []
+        self.payload_light_intensity = 0.0
         
     @property
     def orient_payload_setting(self):
@@ -100,6 +102,8 @@ class StateOrient:
                     light1 = self.face1_sensor.get_light() if self.face1_sensor is not None else Light(0.0)
                     light2 = self.face2_sensor.get_light() if self.face2_sensor is not None else Light(0.0)
                     light3 = self.face3_sensor.get_light() if self.face3_sensor is not None else Light(0.0)
+                    light4 = self.face4_sensor.get_light() if self.face4_sensor is not None else Light(0.0)
+                    self.payload_light_intensity = light4._value
                     lights = [light0, light1, light2, light3]
                 # if fail, set all to 0
                 except Exception as e:

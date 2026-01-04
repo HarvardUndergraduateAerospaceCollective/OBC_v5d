@@ -14,7 +14,7 @@ from fsm.state_processes.state_detumble import StateDetumble
 class FSM:
     def __init__(self, dp_obj, logger, config, deployment_switch,
                  tca, rx0, rx1, tx0, tx1,
-                 face0_sensor, face1_sensor, face2_sensor, face3_sensor,
+                 face0_sensor, face1_sensor, face2_sensor, face3_sensor, face4_sensor,
                  magnetorquer_manager,
                  detumbler_manager,
                  PAYLOAD_BATT_ENABLE
@@ -30,7 +30,7 @@ class FSM:
             "detumble"  : StateDetumble(dp_obj, logger, config, tca, magnetorquer_manager, detumbler_manager),
             "deploy"    : StateDeploy(dp_obj, logger, config, deployment_switch),
             "orient"    : StateOrient(dp_obj, logger, config, tca, rx0, rx1, tx0, tx1,
-                                      face0_sensor, face1_sensor, face2_sensor, face3_sensor,
+                                      face0_sensor, face1_sensor, face2_sensor, face3_sensor, face4_sensor,
                                       PAYLOAD_BATT_ENABLE),
         }
         self.curr_state_name = "bootup"
@@ -40,6 +40,7 @@ class FSM:
         self.deployed = False
         self.orient_best_direction = "None Better That Others"
         self.orient_light_intensity = []
+        self.payload_light_intensity = 0.0
         
     
     def set_state(self, new_state_name):
@@ -115,5 +116,6 @@ class FSM:
             # Cache the best direction and light intensity
             self.orient_best_direction = self.curr_state_object.orient_best_direction
             self.orient_light_intensity = self.curr_state_object.light_intensity
+            self.payload_light_intensity = self.curr_state_object.payload_light_intensity
             self.logger.info("[FSM] orient_best_direction: " + str(self.curr_state_object.best_direction) + ", " + str(self.curr_state_object.orient_best_direction))
             self.logger.info("[FSM] orient_light_intensity: " + str(self.curr_state_object.light_intensity))
