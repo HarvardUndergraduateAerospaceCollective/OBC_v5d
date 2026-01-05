@@ -134,10 +134,10 @@ class StateOrient:
                     
                     # step 4: activate the spring corresponding to best_direction
                     # Direction mapping:
-                        # 0: +X
-                        # 1: -X
-                        # 2: +Y
-                        # 3: -Y
+                        # FACE 0: +X, TX1
+                        # FACE 1: +Y, RX1
+                        # FACE 2: -X, TX0
+                        # FACE 3: -Y, RX0
                     if self.changed == True:
                         self.logger.info("Turning off payload actuators, giving 2 seconds for spring to settle")
                         self.rx0.value = False
@@ -153,31 +153,31 @@ class StateOrient:
                         self.orient_best_direction = "None Better That Others"
                     if self.best_direction == 0:
                         self.logger.info("Activating +X spring")
-                        self.rx0.value = True
-                        self.rx1.value = False
-                        self.tx0.value = False
-                        self.tx1.value = False
-                        self.orient_best_direction = "+X Axis"
-                    if self.best_direction == 1:
-                        self.logger.info("Activating -X spring")
-                        self.rx0.value = False
-                        self.rx1.value = True
-                        self.tx0.value = False
-                        self.tx1.value = False
-                        self.orient_best_direction = "-X Axis"
-                    if self.best_direction == 2:
-                        self.logger.info("Activating +Y spring")
-                        self.rx0.value = False
-                        self.rx1.value = False
-                        self.tx0.value = True
-                        self.tx1.value = False
-                        self.orient_best_direction = "+Y Axis"
-                    if self.best_direction == 3:
-                        self.logger.info("Activating -Y spring")
                         self.rx0.value = False
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = True
+                        self.orient_best_direction = "+X Axis"
+                    if self.best_direction == 1:
+                        self.logger.info("Activating +Y spring")
+                        self.rx0.value = False
+                        self.rx1.value = True
+                        self.tx0.value = False
+                        self.tx1.value = False
+                        self.orient_best_direction = "+Y Axis"
+                    if self.best_direction == 2:
+                        self.logger.info("Activating -X spring")
+                        self.rx0.value = False
+                        self.rx1.value = False
+                        self.tx0.value = True
+                        self.tx1.value = False
+                        self.orient_best_direction = "-X Axis"
+                    if self.best_direction == 3:
+                        self.logger.info("Activating -Y spring")
+                        self.rx0.value = True
+                        self.rx1.value = False
+                        self.tx0.value = False
+                        self.tx1.value = False
                         self.orient_best_direction = "-Y Axis"
                     # set self.changed to False at the end
                     self.changed = False
