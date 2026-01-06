@@ -1,18 +1,13 @@
 import board
 import digitalio
-from busio import SPI
-from lib.ground_station.ground_station import GroundStation
-from lib.pysquared.cdh import CommandDataHandler
-from lib.pysquared.config.config import Config
-from lib.pysquared.hardware.digitalio import initialize_pin
-from lib.pysquared.hardware.radio.manager.rfm9x import RFM9xManager
-from lib.pysquared.hardware.radio.packetizer.packet_manager import PacketManager
 from lib.adafruit_mcp230xx.mcp23017 import MCP23017
-from lib.pysquared.hardware.radio.manager.sx1280 import SX1280Manager
+from lib.pysquared.config.config import Config
+from lib.pysquared.config.jokes_config import JokesConfig
 from lib.pysquared.hardware.busio import _spi_init, initialize_i2c_bus
+from lib.pysquared.hardware.digitalio import initialize_pin
+from lib.pysquared.hardware.radio.manager.sx1280 import SX1280Manager
 from lib.pysquared.logger import Logger
 from lib.pysquared.nvm.counter import Counter
-from lib.pysquared.config.jokes_config import JokesConfig
 
 logger: Logger = Logger(
     error_counter=Counter(1),
@@ -105,8 +100,16 @@ ground_station = GroundStation(
 """
 
 import time
+
+
 def test_sband():
-    choice = input("Choose to be a receiver R or sender S.  Make sure the receiver starts up first!").strip().upper()
+    choice = (
+        input(
+            "Choose to be a receiver R or sender S.  Make sure the receiver starts up first!"
+        )
+        .strip()
+        .upper()
+    )
     if choice == "R":
         # Wait for any response
         start_time = time.time()
@@ -130,5 +133,6 @@ def test_sband():
             print("✅ Beacon sent successfully!")
     print("Stopping test...")
     return
+
 
 test_sband()

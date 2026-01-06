@@ -1,39 +1,38 @@
 # +++++++++++++ IMPORTS +++++++++++++ #
+import asyncio
 import gc
 import os
 import time
+
 import board
-import asyncio
 import digitalio
 import microcontroller
-from fsm.fsm import FSM
-from version import __version__
-from lib.pysquared.logger import Logger
-from lib.pysquared.beacon import Beacon
-from lib.adafruit_tca9548a import TCA9548A
-from lib.pysquared.watchdog import Watchdog
-from lib.pysquared.nvm.counter import Counter
-from lib.pysquared.config.config import Config
-from lib.pysquared.cdh import CommandDataHandler
-from lib.adafruit_mcp230xx.mcp23017 import MCP23017
-from lib.proveskit_rp2350_v5b.register import Register
 from fsm.data_processes.data_process import DataProcess
+from fsm.fsm import FSM
+from lib.adafruit_mcp230xx.mcp23017 import MCP23017
+from lib.adafruit_tca9548a import TCA9548A
+from lib.proveskit_rp2350_v5b.register import Register
+from lib.pysquared.beacon import Beacon
+from lib.pysquared.cdh import CommandDataHandler
+from lib.pysquared.config.config import Config
 from lib.pysquared.config.jokes_config import JokesConfig
-from lib.pysquared.hardware.digitalio import initialize_pin
 from lib.pysquared.detumbler_manager import DetumblerManager
-from lib.pysquared.protos.power_monitor import PowerMonitorProto
+from lib.pysquared.hardware.burnwire.manager.burnwire import BurnwireManager
+from lib.pysquared.hardware.busio import _spi_init, initialize_i2c_bus
+from lib.pysquared.hardware.digitalio import initialize_pin
+from lib.pysquared.hardware.imu.manager.lsm6dsox import LSM6DSOXManager
+from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00Manager
+from lib.pysquared.hardware.magnetometer.manager.lis2mdl import LIS2MDLManager
+from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import MagnetorquerManager
+from lib.pysquared.hardware.power_monitor.manager.ina219 import INA219Manager
 from lib.pysquared.hardware.radio.manager.rfm9x import RFM9xManager
 from lib.pysquared.hardware.radio.manager.sx1280 import SX1280Manager
-from lib.pysquared.hardware.busio import _spi_init, initialize_i2c_bus
-from lib.pysquared.hardware.imu.manager.lsm6dsox import LSM6DSOXManager
-from lib.pysquared.rtc.manager.microcontroller import MicrocontrollerManager
-from lib.pysquared.hardware.burnwire.manager.burnwire import BurnwireManager
-from lib.pysquared.hardware.power_monitor.manager.ina219 import INA219Manager
-from lib.pysquared.hardware.magnetometer.manager.lis2mdl import LIS2MDLManager
 from lib.pysquared.hardware.radio.packetizer.packet_manager import PacketManager
-from lib.pysquared.hardware.light_sensor.manager.veml6031x00 import VEML6031x00Manager
-from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import MagnetorquerManager
-
+from lib.pysquared.logger import Logger
+from lib.pysquared.nvm.counter import Counter
+from lib.pysquared.rtc.manager.microcontroller import MicrocontrollerManager
+from lib.pysquared.watchdog import Watchdog
+from version import __version__
 
 # +++++++++++++ RTC + NVM REGISTERS +++++++++++++ #
 boot_time: float = time.time()
@@ -82,7 +81,13 @@ for i in range(loiter_time):
 
 
 # +++++ HELPER FUNCTION: SAFE SLEEP +++++ #
-async def safe_sleep_async(duration: float, watchdog: Watchdog, logger: Logger, watchdog_timeout: float = 15.0, max_sleep: float = None):
+async def safe_sleep_async(
+    duration: float,
+    watchdog: Watchdog,
+    logger: Logger,
+    watchdog_timeout: float = 15.0,
+    max_sleep: float = None,
+):
     if max_sleep is not None and duration > max_sleep:
         logger.warning(
             "Requested sleep duration exceeds maximum allowed. Adjusting.",
@@ -97,7 +102,10 @@ async def safe_sleep_async(duration: float, watchdog: Watchdog, logger: Logger, 
         time_increment = min(end_time - time.monotonic(), watchdog_timeout)
         await asyncio.sleep(time_increment)
         watchdog.pet()
-        logger.debug("Petting watchdog during safe sleep", time_remaining=end_time - time.monotonic())
+        logger.debug(
+            "Petting watchdog during safe sleep",
+            time_remaining=end_time - time.monotonic(),
+        )
 
 
 # +++++ MAIN FUNCTION: ASYNC LOOP +++++ #
@@ -108,25 +116,29 @@ async def main_async_loop():
             logger, board.GPIO_EXPANDER_RESET, digitalio.Direction.OUTPUT, True
         )
 
-
         # ++++++++++++ INIT Watchdog ++++++++++++ #
         watchdog = Watchdog(logger, board.WDT_WDI)
 
-
         # ++++++++++++ SLEEP 30 Minutes ++++++++++++ #
         # only sleep if not yet deployed OR if booted less than 3 times (as a cut-off)
-        if deployed_count.get() > config.sleep_if_yet_deployed_count or boot_count.get() < config.sleep_if_yet_booted_count:
+        if (
+            deployed_count.get() > config.sleep_if_yet_deployed_count
+            or boot_count.get() < config.sleep_if_yet_booted_count
+        ):
             logger.info("[INFO] Sleeping for 30 minutes...")
-            for _ in range (120):
+            for _ in range(120):
                 time.sleep(15)
                 watchdog.pet()
 
-
         # ++++++++++++ INIT SPI/I2C ++++++++++++ #
         watchdog.pet()
-        SPI0_CS0 = initialize_pin(logger, board.SPI0_CS0, digitalio.Direction.OUTPUT, True)
+        SPI0_CS0 = initialize_pin(
+            logger, board.SPI0_CS0, digitalio.Direction.OUTPUT, True
+        )
 
-        SPI1_CS0 = initialize_pin(logger, board.SPI1_CS0, digitalio.Direction.OUTPUT, True)
+        SPI1_CS0 = initialize_pin(
+            logger, board.SPI1_CS0, digitalio.Direction.OUTPUT, True
+        )
 
         i2c1 = initialize_i2c_bus(
             logger,
@@ -156,7 +168,6 @@ async def main_async_loop():
             board.SPI1_MISO,
         )
 
-
         # ++++++++++++ INIT MCP ++++++++++++ #
         watchdog.pet()
         mcp = MCP23017(i2c1)
@@ -174,7 +185,6 @@ async def main_async_loop():
         PAYLOAD_BATT_ENABLE.value = False
         RF2_IO0 = mcp.get_pin(6)
 
-
         # ++++++++++++ INIT RADIOS ++++++++++++ #
         watchdog.pet()
         try:
@@ -186,8 +196,12 @@ async def main_async_loop():
                 initialize_pin(logger, board.RF2_RST, digitalio.Direction.OUTPUT, True),
                 RF2_IO0,
                 2.4,
-                initialize_pin(logger, board.RF2_TX_EN, digitalio.Direction.OUTPUT, False),
-                initialize_pin(logger, board.RF2_RX_EN, digitalio.Direction.OUTPUT, False),
+                initialize_pin(
+                    logger, board.RF2_TX_EN, digitalio.Direction.OUTPUT, False
+                ),
+                initialize_pin(
+                    logger, board.RF2_RX_EN, digitalio.Direction.OUTPUT, False
+                ),
             )
         except Exception as e:
             sband_radio = None
@@ -236,7 +250,7 @@ async def main_async_loop():
         burnwire1_fire = initialize_pin(
             logger, board.FIRE_DEPLOY1_B, digitalio.Direction.OUTPUT, False
         )
-        
+
         try:
             antenna_deployment = BurnwireManager(
                 logger, burnwire_heater_enable, burnwire1_fire, enable_logic=True
@@ -245,14 +259,20 @@ async def main_async_loop():
             antenna_deployment = None
             logger.debug(f"[WARNING] BurnwireManager Failed to initialize: {e}")
 
-
         # ++++++++++++ INIT PAYLOAD ++++++++++++ #
         watchdog.pet()
-        RX0_OUTPUT = initialize_pin(logger, board.RX0, digitalio.Direction.OUTPUT, False)
-        RX1_OUTPUT = initialize_pin(logger, board.RX1, digitalio.Direction.OUTPUT, False)
-        TX0_OUTPUT = initialize_pin(logger, board.TX0, digitalio.Direction.OUTPUT, False)
-        TX1_OUTPUT = initialize_pin(logger, board.TX1, digitalio.Direction.OUTPUT, False)
-
+        RX0_OUTPUT = initialize_pin(
+            logger, board.RX0, digitalio.Direction.OUTPUT, False
+        )
+        RX1_OUTPUT = initialize_pin(
+            logger, board.RX1, digitalio.Direction.OUTPUT, False
+        )
+        TX0_OUTPUT = initialize_pin(
+            logger, board.TX0, digitalio.Direction.OUTPUT, False
+        )
+        TX1_OUTPUT = initialize_pin(
+            logger, board.TX1, digitalio.Direction.OUTPUT, False
+        )
 
         # +++++++++ INIT LIGHT SENSORS +++++++++ #
         watchdog.pet()
@@ -313,7 +333,7 @@ async def main_async_loop():
             FACE2_ENABLE.value = True
             FACE3_ENABLE.value = True
             FACE4_ENABLE.value = True
-        
+
         mux_reset = initialize_pin(
             logger, board.MUX_RESET, digitalio.Direction.OUTPUT, False
         )
@@ -321,7 +341,6 @@ async def main_async_loop():
         time.sleep(0.1)
         mux_reset.value = True
         tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
-
 
         # +++++++++ INIT DETUMBLER/MAGNETORUQER/IMU +++++++++ #
         watchdog.pet()
@@ -331,13 +350,15 @@ async def main_async_loop():
             detumbler_manager = None
             logger.debug(f"[WARNING] DetumblerManager Failed to initialize: {e}")
         try:
-            magnetorquer_manager = MagnetorquerManager( logger=logger,
-                                                    i2c_addr        =0x5a,
-                                                    addr_x_plus     =tca[0],
-                                                    addr_x_minus    =tca[2],
-                                                    addr_y_plus     =tca[1],
-                                                    addr_y_minus    =tca[3],
-                                                    addr_z_minus    =tca[4])
+            magnetorquer_manager = MagnetorquerManager(
+                logger=logger,
+                i2c_addr=0x5A,
+                addr_x_plus=tca[0],
+                addr_x_minus=tca[2],
+                addr_y_plus=tca[1],
+                addr_y_minus=tca[3],
+                addr_z_minus=tca[4],
+            )
         except Exception as e:
             magnetorquer_manager = None
             logger.debug(f"[WARNING] MagnetorquerManager Failed to initialize: {e}")
@@ -351,7 +372,6 @@ async def main_async_loop():
         except Exception as e:
             imu = None
             logger.debug(f"[WARNING] LSM6DSOXManager Failed to initialize: {e}")
-
 
         # +++++++++ INIT CDH/BEACON +++++++++ #
         watchdog.pet()
@@ -394,7 +414,6 @@ async def main_async_loop():
             if except_reset_count.get() <= config.except_reset_allowed_attemps:
                 except_reset_count.increment()
                 time.sleep(config.watchdog_reset_sleep)
-        
 
         # +++++++++ INIT BATTERY MONITOR +++++++++ #
         watchdog.pet()
@@ -411,25 +430,34 @@ async def main_async_loop():
             if except_reset_count.get() <= config.except_reset_allowed_attemps:
                 except_reset_count.increment()
                 microcontroller.reset()
-        
-        
+
         # +++++++++ INIT DP OBJ AND FSM +++++++++ #
         watchdog.pet()
-        dp_obj = DataProcess(magnetometer=magnetometer,
-                        imu=imu,
-                        battery_power_monitor=battery_power_monitor)
+        dp_obj = DataProcess(
+            magnetometer=magnetometer,
+            imu=imu,
+            battery_power_monitor=battery_power_monitor,
+        )
         dp_obj.start_run_all_data()
-        fsm_obj = FSM(dp_obj,
-                logger,
-                config,
-                deployment_switch=antenna_deployment,
-                tca=tca, rx0=RX0_OUTPUT, rx1=RX1_OUTPUT, tx0=TX0_OUTPUT, tx1=TX1_OUTPUT,
-                face0_sensor=face0_sensor, face1_sensor=face1_sensor,
-                face2_sensor=face2_sensor, face3_sensor=face3_sensor,
-                face4_sensor=face4_sensor,
-                magnetorquer_manager=magnetorquer_manager,
-                detumbler_manager=detumbler_manager,
-                PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE)
+        fsm_obj = FSM(
+            dp_obj,
+            logger,
+            config,
+            deployment_switch=antenna_deployment,
+            tca=tca,
+            rx0=RX0_OUTPUT,
+            rx1=RX1_OUTPUT,
+            tx0=TX0_OUTPUT,
+            tx1=TX1_OUTPUT,
+            face0_sensor=face0_sensor,
+            face1_sensor=face1_sensor,
+            face2_sensor=face2_sensor,
+            face3_sensor=face3_sensor,
+            face4_sensor=face4_sensor,
+            magnetorquer_manager=magnetorquer_manager,
+            detumbler_manager=detumbler_manager,
+            PAYLOAD_BATT_ENABLE=PAYLOAD_BATT_ENABLE,
+        )
         if beacon:
             beacon._fsm_obj = fsm_obj
 
@@ -439,7 +467,7 @@ async def main_async_loop():
                 bytes_remaining=gc.mem_free(),
             )
 
-            all_faces_on() 
+            all_faces_on()
 
             try:
                 if uhf_packet_manager:
@@ -450,13 +478,15 @@ async def main_async_loop():
                 if except_reset_count.get() <= config.except_reset_allowed_attemps:
                     except_reset_count.increment()
                     time.sleep(config.watchdog_reset_sleep)
-            
+
             if beacon:
                 beacon.send()
- 
+
             try:
                 if cdh:
-                    cdh.listen_for_commands(config.cdh_listen_command_timeout) if cdh is not None else None
+                    cdh.listen_for_commands(
+                        config.cdh_listen_command_timeout
+                    ) if cdh is not None else None
             except Exception as e:
                 logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
                 # trigger Watchdog hard reset
@@ -469,7 +499,9 @@ async def main_async_loop():
 
             try:
                 if cdh:
-                    cdh.listen_for_commands(config.cdh_listen_command_timeout) if cdh is not None else None
+                    cdh.listen_for_commands(
+                        config.cdh_listen_command_timeout
+                    ) if cdh is not None else None
             except Exception as e:
                 logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
                 # trigger Watchdog hard reset
@@ -481,13 +513,17 @@ async def main_async_loop():
             logger.info("Entering main loop")
             while True:
                 val = fsm_obj.execute_fsm_step()
-                if val == -1 or fsm_obj.dp_obj.data["data_batt_volt"] <= config.critical_battery_voltage:
+                if (
+                    val == -1
+                    or fsm_obj.dp_obj.data["data_batt_volt"]
+                    <= config.critical_battery_voltage
+                ):
                     await safe_sleep_async(
                         duration=60,
                         watchdog=watchdog,
                         logger=logger,
                         watchdog_timeout=15,
-                        max_sleep=300
+                        max_sleep=300,
                     )
                 await asyncio.sleep(1)
                 watchdog.pet()
@@ -503,5 +539,6 @@ async def main_async_loop():
 
     except Exception as e:
         logger.critical("An exception occured within main.py", e)
+
 
 asyncio.run(main_async_loop())

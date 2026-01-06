@@ -1,7 +1,6 @@
 # state_deploy.py
 
 
-
 # ++++++++++++++ Imports/Installs ++++++++++++++ #
 import asyncio
 
@@ -19,7 +18,7 @@ class StateDeploy:
         self.finished_burn = False
         self.running = False
         self.done = False
-    
+
     async def run(self):
         """
         Run the deployment sequence asynchronously
@@ -34,7 +33,8 @@ class StateDeploy:
                 await asyncio.sleep(4)
                 self.finished_burn = True
             self.done = True
-            
+            self.running = False
+
     def stop(self):
         """
         Used by FSM to manually stop run()

@@ -22,9 +22,9 @@ magnetorquer.set_dipole_moment((0.001, 0.0, -0.001))
 """
 
 import math
-from adafruit_tca9548a import TCA9548A_Channel
+
 from adafruit_drv2605 import DRV2605, MODE_REALTIME
-from busio import I2C
+from adafruit_tca9548a import TCA9548A_Channel
 
 from ....logger import Logger
 from ....protos.magnetorquer import MagnetorquerProto
@@ -84,9 +84,9 @@ class MagnetorquerManager(MagnetorquerProto):
         self,
         logger: Logger,
         i2c_addr: int,
-        addr_x_plus: TCA9548A_Channel,   # use tca[#] to determine the address
+        addr_x_plus: TCA9548A_Channel,  # use tca[#] to determine the address
         addr_x_minus: TCA9548A_Channel,  # use tca[#] to determine the address
-        addr_y_plus: TCA9548A_Channel,   # use tca[#] to determine the address
+        addr_y_plus: TCA9548A_Channel,  # use tca[#] to determine the address
         addr_y_minus: TCA9548A_Channel,  # use tca[#] to determine the address
         addr_z_minus: TCA9548A_Channel,  # use tca[#] to determine the address
     ) -> None:
@@ -110,11 +110,11 @@ class MagnetorquerManager(MagnetorquerProto):
             self._log.debug("Initializing magnetorquer DRV2605 drivers")
             # Initialize all 5 DRV2605 chips
             self._log.debug(f"{i2c_addr}, {addr_x_plus}")
-            self._drv_x_plus:   DRV2605 = DRV2605(addr_x_plus,  i2c_addr)
-            self._drv_x_minus:  DRV2605 = DRV2605(addr_x_minus, i2c_addr)
-            self._drv_y_plus:   DRV2605 = DRV2605(addr_y_plus,  i2c_addr)
-            self._drv_y_minus:  DRV2605 = DRV2605(addr_y_minus, i2c_addr)
-            self._drv_z_minus:  DRV2605 = DRV2605(addr_z_minus, i2c_addr)
+            self._drv_x_plus: DRV2605 = DRV2605(addr_x_plus, i2c_addr)
+            self._drv_x_minus: DRV2605 = DRV2605(addr_x_minus, i2c_addr)
+            self._drv_y_plus: DRV2605 = DRV2605(addr_y_plus, i2c_addr)
+            self._drv_y_minus: DRV2605 = DRV2605(addr_y_minus, i2c_addr)
+            self._drv_z_minus: DRV2605 = DRV2605(addr_z_minus, i2c_addr)
 
             # Configure all drivers for real-time control using ERM mode
             for drv in [
@@ -134,16 +134,18 @@ class MagnetorquerManager(MagnetorquerProto):
             raise HardwareInitializationError(
                 "Failed to initialize magnetorquer DRV2605 drivers"
             ) from e
-        
+
     def stop_dipole_moments(self) -> None:
-        """ To conserve battery, set all the DRVs to 0. """
+        """To conserve battery, set all the DRVs to 0."""
         self._drv_x_minus.realtime_value = 0
         self._drv_x_plus.realtime_value = 0
         self._drv_y_minus.realtime_value = 0
         self._drv_y_plus.realtime_value = 0
         self._drv_z_minus.realtime_value = 0
 
-    def set_dipole_moment(self, dipole_moment: tuple[float, float, float], set_z_high: bool) -> None:
+    def set_dipole_moment(
+        self, dipole_moment: tuple[float, float, float], set_z_high: bool
+    ) -> None:
         """Set the magnetic dipole moment for all three axes.
 
         The dipole moment is achieved by controlling the current through each coil
@@ -155,7 +157,7 @@ class MagnetorquerManager(MagnetorquerProto):
             dipole_moment: A tuple containing the dipole moment for each axis (x, y, z) in A⋅m².
                           Positive values actuate the positive face, negative values actuate
                           the negative face.
-            set_z_high: if we don't have the magnetic field, we'll artifically set Z to high. 
+            set_z_high: if we don't have the magnetic field, we'll artifically set Z to high.
 
         Raises:
             ValueError: If any dipole moment exceeds the maximum achievable value.

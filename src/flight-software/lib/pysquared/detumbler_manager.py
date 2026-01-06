@@ -25,8 +25,8 @@ print(dipole)  # → [-0.0023, 0.0011, 0.0004]
 ```
 """
 
-class DetumblerManager:
 
+class DetumblerManager:
     def __init__(self, gain: float = 1.0):
         """
         Initializes the detumbling controller.
