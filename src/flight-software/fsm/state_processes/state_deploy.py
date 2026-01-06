@@ -18,6 +18,7 @@ class StateDeploy:
         self.finished_burn = False
         self.running = False
         self.done = False
+        self.num_burns = 3
 
     async def run(self):
         """
@@ -29,8 +30,9 @@ class StateDeploy:
             # Burn the wire if not already done to release the antennas
             if not self.finished_burn:
                 if self.deployment_switch:
-                    self.deployment_switch.burn(self.config.deploy_burn_duration)
-                await asyncio.sleep(4)
+                    for _ in range(self.num_burns):
+                        self.deployment_switch.burn(self.config.deploy_burn_duration)
+                        await asyncio.sleep(60)
                 self.finished_burn = True
             self.done = True
             self.running = False
