@@ -48,15 +48,9 @@ class StateDetumble:
             ang_vel_mag = self.dp_obj.data["data_imu_av_magnitude"]
             ang_vel_tuple = self.dp_obj.data["data_imu_av"]
 
-            # Guard against missing sensor data
             if mag_field is None and ang_vel_mag is None:
                 self.logger.warning(
                     "[FSM: Detumble] Magnetometer and angular velocity unavailable; retrying next cycle."
-                )
-                continue
-            if ang_vel_mag is None:
-                self.logger.info(
-                    "[FSM: Detumble] Ang Vel is None; skipping dipole update this cycle."
                 )
                 continue
             # Check for timeout
