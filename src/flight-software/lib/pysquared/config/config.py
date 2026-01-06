@@ -132,6 +132,9 @@ class Config:
         self.detumble_max_time = json_data["detumble_max_time"]
         self.watchdog_reset_sleep = json_data["watchdog_reset_sleep"]
         self.except_reset_allowed_attemps = json_data["except_reset_allowed_attemps"]
+        self.sleep_if_yet_booted_count = json_data["sleep_if_yet_booted_count"]
+        self.sleep_if_yet_deployed_count = json_data["sleep_if_yet_deployed_count"]
+        self.cdh_listen_command_timeout = json_data["cdh_listen_command_timeout"]
 
         self.CONFIG_SCHEMA = {
             "cubesat_name": {"type": str, "min_length": 1, "max_length": 10},
@@ -165,6 +168,9 @@ class Config:
             "detumble_max_time": {"type" : float},
             "watchdog_reset_sleep": {"type" : int},
             "except_reset_allowed_attemps": {"type" : int},
+            "sleep_if_yet_booted_count": {"type" : int},
+            "sleep_if_yet_deployed_count": {"type" : int},
+            "cdh_listen_command_timeout": {"type" : int},
         }
 
     # validates values from input

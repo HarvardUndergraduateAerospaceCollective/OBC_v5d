@@ -115,7 +115,7 @@ async def main_async_loop():
 
         # ++++++++++++ SLEEP 30 Minutes ++++++++++++ #
         # only sleep if not yet deployed OR if booted less than 3 times (as a cut-off)
-        if deployed_count.get() == 0 or boot_count.get() <= 2:
+        if deployed_count.get() > config.sleep_if_yet_deployed_count or boot_count.get() < config.sleep_if_yet_booted_count:
             logger.info("[INFO] Sleeping for 30 minutes...")
             for _ in range (120):
                 time.sleep(15)
@@ -332,10 +332,10 @@ async def main_async_loop():
             logger.debug(f"[WARNING] DetumblerManager Failed to initialize: {e}")
         try:
             magnetorquer_manager = MagnetorquerManager( logger=logger,
-                                                    i2c_addr        =0x5a, # TODO: DOUBLE CHECK!  this is default DRV2605 for adafruit
+                                                    i2c_addr        =0x5a,
                                                     addr_x_plus     =tca[0],
-                                                    addr_x_minus    =tca[1],
-                                                    addr_y_plus     =tca[2],
+                                                    addr_x_minus    =tca[2],
+                                                    addr_y_plus     =tca[1],
                                                     addr_y_minus    =tca[3],
                                                     addr_z_minus    =tca[4])
         except Exception as e:
@@ -397,10 +397,11 @@ async def main_async_loop():
         
 
         # +++++++++ INIT BATTERY MONITOR +++++++++ #
+        watchdog.pet()
         try:
             if cdh:
                 try:
-                    cdh.listen_for_commands(10)
+                    cdh.listen_for_commands(config.cdh_listen_command_timeout)
                 except Exception as e:
                     logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
             battery_power_monitor = INA219Manager(logger, i2c0, 0x40)
@@ -455,7 +456,7 @@ async def main_async_loop():
  
             try:
                 if cdh:
-                    cdh.listen_for_commands(10) if cdh is not None else None
+                    cdh.listen_for_commands(config.cdh_listen_command_timeout) if cdh is not None else None
             except Exception as e:
                 logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
                 # trigger Watchdog hard reset
@@ -468,7 +469,7 @@ async def main_async_loop():
 
             try:
                 if cdh:
-                    cdh.listen_for_commands(10) if cdh is not None else None
+                    cdh.listen_for_commands(config.cdh_listen_command_timeout) if cdh is not None else None
             except Exception as e:
                 logger.debug(f"[WARNING] cdh failed to listen or respond: {e}")
                 # trigger Watchdog hard reset

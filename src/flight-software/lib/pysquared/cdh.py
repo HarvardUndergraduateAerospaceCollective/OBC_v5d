@@ -57,6 +57,11 @@ class CommandDataHandler:
     command_change_detumble_max_time : str = "detumble_max_time"
     command_change_critical_battery_voltage : str = "critical_battery_voltage"
     command_change_degraded_battery_voltage : str = "degraded_battery_voltage"
+    command_change_sleep_if_yet_booted_count : str = "sleep_if_yet_booted_count"
+    command_change_sleep_if_yet_deployed_count : str = "sleep_if_yet_deployed_count"
+    command_change_cdh_listen_command_timeout : str = "cdh_listen_command_timeout"
+    command_change_watchdog_reset_sleep : str = "watchdog_reset_sleep"
+    command_change_except_reset_allowed_attemps : str = "except_reset_allowed_attemps"
     
     oscar_password: str = "Hello World!"  # Default password for OSCAR commands
 
@@ -287,6 +292,16 @@ class CommandDataHandler:
                 self.change_critical_battery_voltage(args)
             elif cmd == self.command_change_degraded_battery_voltage:
                 self.change_degraded_battery_voltage(args)
+            elif cmd == self.command_change_sleep_if_yet_booted_count:
+                self.change_sleep_if_yet_booted_count(args)
+            elif cmd == self.command_change_sleep_if_yet_deployed_count:
+                self.change_sleep_if_yet_deployed_count(args)
+            elif cmd == self.command_change_cdh_listen_command_timeout:
+                self.change_cdh_listen_command_timeout(args)
+            elif cmd == self.command_change_watchdog_reset_sleep:
+                self.change_watchdog_reset_sleep(args)
+            elif cmd == self.command_change_except_reset_allowed_attemps:
+                self.change_except_reset_allowed_attemps(args)
             elif cmd == self.command_exec:
                 self.exec_command(args)
             elif cmd == self.command_reset:
@@ -734,6 +749,161 @@ class CommandDataHandler:
             self._log.error("Failed to change degraded battery voltage", err=e)
             self._packet_manager.send(
                 f"Failed to change degraded battery voltage: {e}".encode("utf-8")
+            )
+
+    def change_sleep_if_yet_booted_count(self, args: list[str]) -> None:
+        """Changes the 30 min sleep condition based on boot count
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        sleep_if_yet_booted_count = self._config.sleep_if_yet_booted_count
+
+        if len(args) < 1:
+            self._log.warning("No sleep condition for boot count specified")
+            self._packet_manager.send(
+                "No sleep condition for boot count specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        sleep_if_yet_booted_count = int(args[0])
+
+        try:
+            self._config.update_config("sleep_if_yet_booted_count", sleep_if_yet_booted_count, temporary=False)
+            self._log.info("Sleep if yet booted value changed")
+            self._packet_manager.send(
+                f"Sleep if yet booted value changed: {sleep_if_yet_booted_count}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change sleep condition for boot count", err=e)
+            self._packet_manager.send(
+                f"Failed to change sleep condition for boot count: {e}".encode("utf-8")
+            )
+
+    def change_sleep_if_yet_deployed_count(self, args: list[str]) -> None:
+        """Changes the 30 min sleep condition based on deployed count
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        sleep_if_yet_deployed_count = self._config.sleep_if_yet_deployed_count
+
+        if len(args) < 1:
+            self._log.warning("No sleep condition for deployed count specified")
+            self._packet_manager.send(
+                "No sleep condition for deployed count specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        sleep_if_yet_deployed_count = int(args[0])
+
+        try:
+            self._config.update_config("sleep_if_yet_deployed_count", sleep_if_yet_deployed_count, temporary=False)
+            self._log.info("Sleep if yet deployed value changed")
+            self._packet_manager.send(
+                f"Sleep if yet deployed value changed: {sleep_if_yet_deployed_count}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change sleep condition for deployed count", err=e)
+            self._packet_manager.send(
+                f"Failed to change sleep condition for deployed count: {e}".encode("utf-8")
+            )
+    
+    def change_cdh_listen_command_timeout(self, args: list[str]) -> None:
+        """Changes the cdh listen command timeout
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        cdh_listen_command_timeout = self._config.cdh_listen_command_timeout
+
+        if len(args) < 1:
+            self._log.warning("No cdh listen command timeout specified")
+            self._packet_manager.send(
+                "No cdh listen command timeout specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        cdh_listen_command_timeout = int(args[0])
+
+        try:
+            self._config.update_config("cdh_listen_command_timeout", cdh_listen_command_timeout, temporary=False)
+            self._log.info("cdh listen command timeout changed")
+            self._packet_manager.send(
+                f"cdh listen command timeout changed: {cdh_listen_command_timeout}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change cdh listen command timeout", err=e)
+            self._packet_manager.send(
+                f"Failed to change cdh listen command timeout: {e}".encode("utf-8")
+            )
+
+    def change_watchdog_reset_sleep(self, args: list[str]) -> None:
+        """Changes the watchdog_reset_sleep
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        watchdog_reset_sleep = self._config.watchdog_reset_sleep
+
+        if len(args) < 1:
+            self._log.warning("No watchdog_reset_sleep specified")
+            self._packet_manager.send(
+                "No watchdog_reset_sleep specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        watchdog_reset_sleep = int(args[0])
+
+        try:
+            self._config.update_config("watchdog_reset_sleep", watchdog_reset_sleep, temporary=False)
+            self._log.info("watchdog_reset_sleep changed")
+            self._packet_manager.send(
+                f"watchdog_reset_sleep changed: {watchdog_reset_sleep}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change watchdog_reset_sleep", err=e)
+            self._packet_manager.send(
+                f"Failed to change watchdog_reset_sleep: {e}".encode("utf-8")
+            )
+
+    def change_except_reset_allowed_attemps(self, args: list[str]) -> None:
+        """Changes the except_reset_allowed_attemps
+
+        Args:
+            args: A list of arguments, the first item must be the new value. All other items in the args list are ignored.
+        """
+        except_reset_allowed_attemps = self._config.except_reset_allowed_attemps
+
+        if len(args) < 1:
+            self._log.warning("No except_reset_allowed_attemps specified")
+            self._packet_manager.send(
+                "No except_reset_allowed_attemps specified.".encode(
+                    "utf-8"
+                )
+            )
+            return
+
+        except_reset_allowed_attemps = int(args[0])
+
+        try:
+            self._config.update_config("except_reset_allowed_attemps", except_reset_allowed_attemps, temporary=False)
+            self._log.info("except_reset_allowed_attemps changed")
+            self._packet_manager.send(
+                f"except_reset_allowed_attemps changed: {except_reset_allowed_attemps}".encode("utf-8")
+            )
+        except ValueError as e:
+            self._log.error("Failed to change except_reset_allowed_attemps", err=e)
+            self._packet_manager.send(
+                f"Failed to change except_reset_allowed_attemps: {e}".encode("utf-8")
             )
 
     def reset(self) -> None:

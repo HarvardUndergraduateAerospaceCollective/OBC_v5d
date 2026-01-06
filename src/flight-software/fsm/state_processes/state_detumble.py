@@ -23,7 +23,7 @@ class StateDetumble:
         self.config = config
         self.start_time = None
         self.magnetorquer_manager : MagnetorquerManager | None = magnetorquer_manager                          
-        self.detumbler_manager = detumbler_manager
+        self.detumbler_manager : DetumblerManager | None = detumbler_manager
 
     async def run(self):
         """
@@ -73,7 +73,7 @@ class StateDetumble:
             # Send result to magnetorquer
             if self.magnetorquer_manager:
                 set_z_high = False
-                # set Z high if we don't only have the magnetic field
+                # set Z high if we only don't have the magnetic field
                 if mag_field is None and ang_vel_mag is not None:
                     self.logger.info("[FSM: Detumble] Mag Field is None, Ang Vel is not None, setting -Z to high (127).")
                     set_z_high = True

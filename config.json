@@ -21,6 +21,9 @@
   "detumble_max_time": 90.0,
   "watchdog_reset_sleep": 30,
   "except_reset_allowed_attemps": 3,
+  "sleep_if_yet_booted_count": 3,
+  "sleep_if_yet_deployed_count": 0,
+  "cdh_listen_command_timeout": 10,
 
   "joke_reply": [
     "This is the way",
