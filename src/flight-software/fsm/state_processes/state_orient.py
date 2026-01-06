@@ -154,6 +154,7 @@ class StateOrient:
                 if not in_sunlight:
                     # remember we don't have a valid direction
                     self.best_direction = -1
+                    self._safe_all_off()
                     self.changed = False
                     self.logger.info(
                         "[Orient] Threshold not exceeded, not in sunlight.  Waiting two minutes..."
