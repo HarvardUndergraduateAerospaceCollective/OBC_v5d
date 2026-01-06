@@ -61,11 +61,16 @@ class DataProcess:
         Get battery voltage (bv)
         """
         while self.running:
-            if self.protos_power_monitor is None:
-                voltage = 8
-            else:
-                voltage = self.protos_power_monitor.get_bus_voltage()._value
-            self.data["data_batt_volt"] = voltage
+            try:
+                if self.protos_power_monitor is None:
+                    # Conservative default: 0V triggers charging mode
+                    voltage = 0.0
+                else:
+                    voltage = self.protos_power_monitor.get_bus_voltage()._value
+                self.data["data_batt_volt"] = voltage
+            except Exception as e:
+                # On sensor read failure, keep last known value and log error
+                print(f"[ERROR] Battery voltage read failed: {e}")
             await asyncio.sleep(1)
 
     async def get_data_imu_av(self):
@@ -73,33 +78,45 @@ class DataProcess:
         Get data_imu_av and data_imu_av_magnitude
         """
         while self.running:
-            if self.protos_imu:
-                imu_acc_data = list(self.protos_imu.get_angular_velocity().value)
-                self.data["data_imu_av"] = imu_acc_data
-                # compute the magnitude of angular velocity
-                ωx, ωy, ωz = imu_acc_data
-                magnitude = (ωx**2 + ωy**2 + ωz**2) ** 0.5
-                self.data["data_imu_av_magnitude"] = magnitude
-                await asyncio.sleep(1)
+            try:
+                if self.protos_imu:
+                    imu_acc_data = list(self.protos_imu.get_angular_velocity().value)
+                    self.data["data_imu_av"] = imu_acc_data
+                    # compute the magnitude of angular velocity
+                    ωx, ωy, ωz = imu_acc_data
+                    magnitude = (ωx**2 + ωy**2 + ωz**2) ** 0.5
+                    self.data["data_imu_av_magnitude"] = magnitude
+            except Exception as e:
+                # On sensor read failure, keep last known value and log error
+                print(f"[ERROR] IMU angular velocity read failed: {e}")
+            await asyncio.sleep(1)
 
     async def get_data_imu_acc(self):
         """
         Get imu acceleration
         """
         while self.running:
-            if self.protos_imu:
-                imu_acc_data = list(self.protos_imu.get_acceleration().value)
-                self.data["data_imu_acc"] = imu_acc_data
-                await asyncio.sleep(1)
+            try:
+                if self.protos_imu:
+                    imu_acc_data = list(self.protos_imu.get_acceleration().value)
+                    self.data["data_imu_acc"] = imu_acc_data
+            except Exception as e:
+                # On sensor read failure, keep last known value and log error
+                print(f"[ERROR] IMU acceleration read failed: {e}")
+            await asyncio.sleep(1)
 
     async def get_data_magnetometer_vector(self):
         """
         Get magnetometer vector
         """
         while self.running:
-            if self.protos_magnetometer:
-                magnetometer_data = list(
-                    self.protos_magnetometer.get_magnetic_field().value
-                )
-                self.data["data_magnetometer_vector"] = magnetometer_data
-                await asyncio.sleep(1)
+            try:
+                if self.protos_magnetometer:
+                    magnetometer_data = list(
+                        self.protos_magnetometer.get_magnetic_field().value
+                    )
+                    self.data["data_magnetometer_vector"] = magnetometer_data
+            except Exception as e:
+                # On sensor read failure, keep last known value and log error
+                print(f"[ERROR] Magnetometer read failed: {e}")
+            await asyncio.sleep(1)

@@ -51,8 +51,8 @@
   "repeat_code": "RP",
   "sleep_duration": 30,
   "sleep_if_yet_booted_count": 3,
-  "sleep_if_yet_deployed_count": 0,
+  "sleep_if_yet_deployed_count": 1,
   "super_secret_code": "ABCD",
   "turbo_clock": false,
-  "watchdog_reset_sleep": 30
+  "watchdog_reset_sleep": 60
 }

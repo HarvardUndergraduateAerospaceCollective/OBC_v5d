@@ -122,7 +122,7 @@ async def main_async_loop():
         # ++++++++++++ SLEEP 30 Minutes ++++++++++++ #
         # only sleep if not yet deployed OR if booted less than 3 times (as a cut-off)
         if (
-            deployed_count.get() > config.sleep_if_yet_deployed_count
+            deployed_count.get() < config.sleep_if_yet_deployed_count
             or boot_count.get() < config.sleep_if_yet_booted_count
         ):
             logger.info("[INFO] Sleeping for 30 minutes...")
@@ -206,9 +206,6 @@ async def main_async_loop():
         except Exception as e:
             sband_radio = None
             logger.debug(f"[WARNING] SX1280Manager Failed to initialize: {e}")
-            if except_reset_count.get() <= config.except_reset_allowed_attemps:
-                except_reset_count.increment()
-                time.sleep(config.watchdog_reset_sleep)
         try:
             uhf_radio = RFM9xManager(
                 logger,
@@ -386,6 +383,7 @@ async def main_async_loop():
                 except_reset_count.increment()
                 time.sleep(config.watchdog_reset_sleep)
         time.sleep(5)
+        watchdog.pet()
         try:
             if uhf_packet_manager is None:
                 raise ValueError("beacon init, uhf_packet_manager is None")
@@ -430,6 +428,8 @@ async def main_async_loop():
             if except_reset_count.get() <= config.except_reset_allowed_attemps:
                 except_reset_count.increment()
                 microcontroller.reset()
+            else:
+                logger.critical("Exceeded reset attempts - continuing without battery monitor!", Exception("No battery monitor"))
 
         # +++++++++ INIT DP OBJ AND FSM +++++++++ #
         watchdog.pet()
@@ -439,6 +439,12 @@ async def main_async_loop():
             battery_power_monitor=battery_power_monitor,
         )
         dp_obj.start_run_all_data()
+        
+        # Wait for sensor data to initialize before FSM starts
+        logger.info("[INFO] Waiting for sensor data initialization...")
+        await asyncio.sleep(2)
+        logger.info(f"[INFO] Initial battery voltage: {dp_obj.data['data_batt_volt']}V")
+        
         fsm_obj = FSM(
             dp_obj,
             logger,
