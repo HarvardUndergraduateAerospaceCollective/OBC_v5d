@@ -155,7 +155,7 @@ class PacketManager:
                     "Listen timeout reached",
                     elapsed=time.time() - start_time,
                 )
-                return
+                return None
 
             # Try to receive a packet
             packet = self._radio.receive(_timeout)
@@ -205,7 +205,6 @@ class PacketManager:
     def send_acknowledgement(self) -> None:
         """Sends an acknowledgment to the radio."""
         self.send(b"ACK")
-        print("sending acknowledgment packet")
         self._logger.debug("Sent acknowledgment packet")
 
     def get_last_rssi(self) -> int:

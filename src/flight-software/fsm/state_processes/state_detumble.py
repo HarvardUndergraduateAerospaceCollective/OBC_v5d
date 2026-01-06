@@ -28,7 +28,7 @@ class StateDetumble:
 
     async def run(self):
         """
-        Run the deployment sequence asynchronously
+        Run the detumble sequence asynchronously
         """
         self.running = True
         self.done = (
@@ -79,7 +79,7 @@ class StateDetumble:
                 self.done = True
                 break
             # If Ang Vel is not stable, compute dipole
-            # This is the quantity you want your magnetorquers to generate to stabilize CubeSAT
+            # This is the quantity you want your magnetorquers to generate to stabilize HUCSat
             try:
                 if self.detumbler_manager is None:
                     raise ValueError("detumbler_manager is None")

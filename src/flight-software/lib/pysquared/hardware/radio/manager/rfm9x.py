@@ -235,6 +235,8 @@ class RFM9xManager(BaseRadioManager, TemperatureSensorProto):
             cs,
             rst,
             transmit_frequency,
+            code_rate=lora_config.coding_rate,
+            max_output=lora_config.max_output,
         )
 
         radio.ack_delay = lora_config.ack_delay

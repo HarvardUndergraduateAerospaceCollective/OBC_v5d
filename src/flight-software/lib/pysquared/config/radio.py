@@ -168,6 +168,7 @@ class LORAConfig:
         self.ack_delay: float = lora_dict["ack_delay"]
         self.coding_rate: int = lora_dict["coding_rate"]
         self.cyclic_redundancy_check: bool = lora_dict["cyclic_redundancy_check"]
+        self.max_output: bool = lora_dict["max_output"]
         self.spreading_factor: Literal[6, 7, 8, 9, 10, 11, 12] = lora_dict[
             "spreading_factor"
         ]
