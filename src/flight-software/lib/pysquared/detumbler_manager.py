@@ -106,15 +106,25 @@ class DetumblerManager:
 
         Returns:
             list: Dipole moment vector to apply via magnetorquers.
+                  Returns [0.0, 0.0, 0.0] if magnetic field magnitude is near-zero.
 
-        Raises:
-            ValueError: If the magnetic field vector has zero magnitude.
+        Note:
+            If the magnetic field magnitude is below a safe threshold (1e-9 Tesla),
+            returns zero dipole to avoid division by zero or numerical instability.
         """
         # convert micro-Telsa to Telsa
         mag_field_T = tuple(b * 1e-6 for b in mag_field)
 
+        # Compute magnitude squared of magnetic field
+        mag_magnitude_sq = self.dot_product(mag_field_T, mag_field_T)
+
+        # Zero-magnitude protection: if B is near-zero, return zero dipole
+        # Threshold: 1e-9 Tesla squared (1 nT) - below typical Earth field (~25-65 µT)
+        if mag_magnitude_sq < 1e-18:
+            return [0.0, 0.0, 0.0]
+
         gain = self.gain_func()
-        scalar_coef = -gain / pow(self.dot_product(mag_field_T, mag_field_T), 0.5)
+        scalar_coef = -gain / pow(mag_magnitude_sq, 0.5)
         dipole_out = self.x_product(mag_field_T, ang_vel)
         for i in range(3):
             dipole_out[i] *= scalar_coef

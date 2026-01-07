@@ -36,6 +36,7 @@ class Config:
         detumble_enable_z (bool): Enable detumbling on Z axis.
         detumble_enable_x (bool): Enable detumbling on X axis.
         detumble_enable_y (bool): Enable detumbling on Y axis.
+        detumble_gain (float): Gain constant for detumble control law (default 1.0).
         jokes (list[str]): List of jokes for the cubesat (loaded from jokes.json).
         debug (bool): Debug mode flag.
         heating (bool): Heating system enabled flag.
@@ -125,9 +126,12 @@ class Config:
         self.fsm_batt_threshold_orient = json_data["fsm_batt_threshold_orient"]
         self.fsm_batt_threshold_deploy = json_data["fsm_batt_threshold_deploy"]
         self.deploy_burn_duration = json_data["deploy_burn_duration"]
+        self.deploy_max_attempts = json_data.get("deploy_max_attempts", 3)
+        self.deploy_retry_delay = json_data.get("deploy_retry_delay", 60.0)
         self.detumble_adjust_frequency = json_data["detumble_adjust_frequency"]
         self.detumble_stabilize_threshold = json_data["detumble_stabilize_threshold"]
         self.detumble_max_time = json_data["detumble_max_time"]
+        self.detumble_gain = json_data["detumble_gain"]
         self.watchdog_reset_sleep = json_data["watchdog_reset_sleep"]
         self.except_reset_allowed_attemps = json_data["except_reset_allowed_attemps"]
         self.sleep_if_yet_booted_count = json_data["sleep_if_yet_booted_count"]
@@ -160,9 +164,12 @@ class Config:
             "fsm_batt_threshold_orient": {"type" : float},
             "fsm_batt_threshold_deploy": {"type" : float},
             "deploy_burn_duration": {"type" : float},
+            "deploy_max_attempts": {"type" : int},
+            "deploy_retry_delay": {"type" : float},
             "detumble_adjust_frequency": {"type" : float},
             "detumble_stabilize_threshold": {"type" : float},
             "detumble_max_time": {"type" : float},
+            "detumble_gain": {"type" : float},
             "watchdog_reset_sleep": {"type" : int},
             "except_reset_allowed_attemps": {"type" : int},
             "sleep_if_yet_booted_count": {"type" : int},

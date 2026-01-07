@@ -252,6 +252,8 @@ class StateOrient:
         Used by FSM to manually stop run()
         """
         self.running = False
+        # Ensure all actuators are off when stopping orient state
+        self._safe_all_off()
 
     def is_done(self):
         """

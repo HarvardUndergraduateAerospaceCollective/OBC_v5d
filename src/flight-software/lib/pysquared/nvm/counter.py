@@ -50,6 +50,15 @@ class Counter:
         value: int = (self.get() + 1) & 0xFF  # 8-bit counter with rollover
         self._datastore[self._index] = value
 
+    def set(self, value: int) -> None:
+        """
+        Sets the counter to a specific value.
+
+        Args:
+            value: The value to set (0-255).
+        """
+        self._datastore[self._index] = value & 0xFF
+
     def get_name(self) -> str:
         """
         get_name returns the name of the counter

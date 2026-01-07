@@ -14,15 +14,25 @@ burnwire.burn()
 """
 
 import time
+from typing import TYPE_CHECKING
 
 from digitalio import DigitalInOut
 
 from ....logger import Logger
 from ....protos.burnwire import BurnwireProto
 
+if TYPE_CHECKING:
+    from ....watchdog import Watchdog
+
 
 class BurnwireManager(BurnwireProto):
     """Manages the activation of a burnwire."""
+
+    # Safety limit: Maximum burn duration in seconds (prevents runaway burns)
+    MAX_BURN_DURATION_SEC = 25.0
+
+    # Watchdog pet interval during burns (seconds)
+    WATCHDOG_PET_INTERVAL_SEC = 10.0
 
     def __init__(
         self,
@@ -30,6 +40,7 @@ class BurnwireManager(BurnwireProto):
         enable_burn: DigitalInOut,
         fire_burn: DigitalInOut,
         enable_logic: bool = True,
+        watchdog: "Watchdog | None" = None,
     ) -> None:
         """Initializes the burnwire manager.
 
@@ -38,9 +49,11 @@ class BurnwireManager(BurnwireProto):
             enable_burn: The pin used to enable the burnwire circuit.
             fire_burn: The pin used to fire the burnwire.
             enable_logic: The logic level to enable the burnwire.
+            watchdog: Optional watchdog to pet during long burn operations.
         """
         self._log: Logger = logger
         self._enable_logic: bool = enable_logic
+        self._watchdog: "Watchdog | None" = watchdog
 
         self._enable_burn: DigitalInOut = enable_burn
         self._fire_burn: DigitalInOut = fire_burn
@@ -52,6 +65,7 @@ class BurnwireManager(BurnwireProto):
 
         Args:
             timeout_duration: The maximum amount of time to keep the burnwire on.
+                             Capped at MAX_BURN_DURATION_SEC for safety.
 
         Returns:
             True if the burn was successful, False otherwise.
@@ -59,6 +73,13 @@ class BurnwireManager(BurnwireProto):
         Raises:
             Exception: If there is an error toggling the burnwire pins.
         """
+        # Safety cap: limit burn duration to prevent runaway burns
+        if timeout_duration > self.MAX_BURN_DURATION_SEC:
+            self._log.warning(
+                f"Burn duration {timeout_duration}s exceeds safety limit, capping to {self.MAX_BURN_DURATION_SEC}s"
+            )
+            timeout_duration = self.MAX_BURN_DURATION_SEC
+
         _start_time = time.monotonic()
 
         self._log.debug(
@@ -126,6 +147,8 @@ class BurnwireManager(BurnwireProto):
     def _attempt_burn(self, duration: float = 5.0) -> None:
         """Attempts to actuate the burnwire for a set period of time.
 
+        Pets the watchdog during long burns to prevent watchdog reset.
+
         Args:
             duration: The duration of the burn.
 
@@ -143,7 +166,20 @@ class BurnwireManager(BurnwireProto):
                 error = RuntimeError("Failed to set fire_burn pin")
                 raise error from e
 
-            time.sleep(duration)
+            # Sleep in increments, petting watchdog to prevent reset during long burns
+            end_time = time.monotonic() + duration
+            while time.monotonic() < end_time:
+                # Sleep for watchdog interval or remaining time, whichever is shorter
+                sleep_time = min(
+                    end_time - time.monotonic(),
+                    self.WATCHDOG_PET_INTERVAL_SEC
+                )
+                if sleep_time > 0:
+                    time.sleep(sleep_time)
+
+                # Pet watchdog if available
+                if self._watchdog is not None:
+                    self._watchdog.pet()
 
         except RuntimeError as e:
             # Log the error if it occurs during the burn process

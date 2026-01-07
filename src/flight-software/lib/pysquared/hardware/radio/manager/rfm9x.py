@@ -134,6 +134,13 @@ class RFM9xManager(BaseRadioManager, TemperatureSensorProto):
                 self._radio.ack_delay = value
             elif key == "cyclic_redundancy_check":
                 self._radio.enable_crc = value
+            elif key == "max_output":
+                # Changing max_output requires reinitializing the radio
+                # For now, log a warning that this requires a reboot
+                self._log.warning(
+                    "max_output change requires reboot to take effect",
+                    max_output=value,
+                )
             elif key == "spreading_factor":
                 self._radio.spreading_factor = value
                 if value > 9:
@@ -141,7 +148,14 @@ class RFM9xManager(BaseRadioManager, TemperatureSensorProto):
                 else:
                     self._radio.preamble_length = 8  # Default preamble length
             elif key == "transmit_power":
-                self._radio.tx_power = value
+                # Only set if max_output is not enabled
+                if not self._radio_config.lora.max_output:
+                    self._radio.tx_power = value
+                else:
+                    self._log.warning(
+                        "transmit_power ignored when max_output=True",
+                        transmit_power=value,
+                    )
 
     def get_modulation(self) -> Type[RadioModulation]:
         """Gets the modulation mode from the initialized RFM9x radio.
@@ -236,12 +250,15 @@ class RFM9xManager(BaseRadioManager, TemperatureSensorProto):
             rst,
             transmit_frequency,
             code_rate=lora_config.coding_rate,
+            max_output=lora_config.max_output,
         )
 
         radio.ack_delay = lora_config.ack_delay
         radio.enable_crc = lora_config.cyclic_redundancy_check
         radio.spreading_factor = lora_config.spreading_factor
-        radio.tx_power = lora_config.transmit_power
+        # Only set tx_power if max_output is False (max_output=True overrides tx_power)
+        if not lora_config.max_output:
+            radio.tx_power = lora_config.transmit_power
 
         if radio.spreading_factor > 9:
             radio.preamble_length = radio.spreading_factor

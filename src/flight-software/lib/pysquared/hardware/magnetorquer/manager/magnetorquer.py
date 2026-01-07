@@ -57,7 +57,7 @@ class MagnetorquerManager(MagnetorquerProto):
     _coil_area_x_y = _coil_length_x_y * _coil_width_x_y
     """Area of the x and y-axis coil in square meters."""
 
-    _coil_resistance_x_y = 57.2
+    _coil_resistance_x_y = 24.5
     """Resistance of the x and y-axis coil in ohms."""
 
     _coil_max_current_x_y = _coil_voltage / _coil_resistance_x_y
@@ -74,7 +74,7 @@ class MagnetorquerManager(MagnetorquerProto):
     _coil_area_z = math.pi * (_coil_diameter_z / 2) ** 2
     """Area of the z-axis coil in square meters."""
 
-    _coil_resistance_z = 248.8
+    _coil_resistance_z = 120.4
     """Resistance of the z-axis coil in ohms."""
 
     _coil_max_current_z = _coil_voltage / _coil_resistance_z
@@ -189,7 +189,7 @@ class MagnetorquerManager(MagnetorquerProto):
             )
 
             # Calculate and set Z-axis dipole moment
-            # Z-axis only has negative face coil
+            # Z-axis only has negative face coil (no Z+ coil)
             z_current = self._dipole_to_current(
                 z_dipole, self._coil_num_turns_z, self._coil_area_z
             )
@@ -199,9 +199,11 @@ class MagnetorquerManager(MagnetorquerProto):
                 error_msg = "Z-axis dipole moment {} A*m^2 exceeds maximum ({} A*m^2)"
                 raise ValueError(error_msg.format(z_dipole, self._coil_max_current_z))
 
-            # Set Z-axis current (only Z- face, so negate the sign for proper direction)
-            z_value = self._current_to_drv_value(-z_current, self._coil_max_current_z)
-            # if we don't have magnetic field, set z_value to artifically high
+            # Set Z-axis current using signed conversion
+            # Z- coil has direction_sign = -1, so we negate the current
+            # to get the correct drive level for the physical coil orientation
+            z_value = self._current_to_drv_value_signed(-z_current, self._coil_max_current_z)
+            # if we don't have magnetic field, set z_value to arbitrarily high
             # set it to the max value that the DRV can take, 127
             if set_z_high:
                 z_value = 127
@@ -246,17 +248,14 @@ class MagnetorquerManager(MagnetorquerProto):
             error_msg = "{}-axis dipole moment {} A*m^2 exceeds maximum ({} A*m^2)"
             raise ValueError(error_msg.format(axis_name, max_dipole))
 
-        # Set the appropriate driver based on current direction
-        if current >= 0:
-            # Positive dipole: activate positive face, deactivate negative face
-            plus_value = self._current_to_drv_value(current, max_current)
-            drv_plus.realtime_value = plus_value
-            drv_minus.realtime_value = 0
-        else:
-            # Negative dipole: activate negative face, deactivate positive face
-            minus_value = self._current_to_drv_value(-current, max_current)
-            drv_plus.realtime_value = 0
-            drv_minus.realtime_value = minus_value
+        # Convert current to signed DRV value (-127 to +127)
+        drive_value = self._current_to_drv_value_signed(current, max_current)
+
+        # Drive both coils with opposite signs
+        # Plus coil: direction_sign = +1, so drive_value * +1 = drive_value
+        # Minus coil: direction_sign = -1, so drive_value * -1 = -drive_value
+        drv_plus.realtime_value = drive_value
+        drv_minus.realtime_value = -drive_value
 
     @staticmethod
     def _dipole_to_current(dipole: float, num_turns: float, area: float) -> float:
@@ -268,34 +267,36 @@ class MagnetorquerManager(MagnetorquerProto):
             area: Area of the coil in m².
 
         Returns:
-            Required current in Amperes.
+            Required current in Amperes (can be negative).
         """
         # dipole_moment = N * I * A
         # Therefore: I = dipole_moment / (N * A)
         return dipole / (num_turns * area)
 
     @staticmethod
-    def _current_to_drv_value(current: float, max_current: float) -> int:
-        """Convert current to DRV2605 realtime value.
+    def _current_to_drv_value_signed(current: float, max_current: float) -> int:
+        """Convert current to signed DRV2605 realtime value.
 
         The DRV2605 in ERM mode with open-loop control expects a signed 8-bit value
         where 127 represents maximum forward drive and -127 represents maximum reverse.
-        For unidirectional control (as used here), we map 0-max_current to 0-127.
 
         Args:
-            current: Desired current in Amperes.
-            max_current: Maximum current capability in Amperes.
+            current: Desired current in Amperes (can be negative).
+            max_current: Maximum current capability in Amperes (positive).
 
         Returns:
-            DRV2605 realtime value (0-127).
+            DRV2605 realtime value (-127 to +127).
         """
-        # Clamp current to valid range
-        current = max(0.0, min(current, max_current))
+        # Avoid division by zero
+        if max_current <= 0:
+            return 0
 
-        # Scale to 0-127 range
-        if max_current > 0:
-            value = int((current / max_current) * 127)
-        else:
-            value = 0
+        # Clamp current magnitude to max_current, preserving sign
+        if abs(current) > max_current:
+            current = max_current if current > 0 else -max_current
 
-        return max(0, min(value, 127))
+        # Scale to -127 to +127 range
+        value = int(round((current / max_current) * 127.0))
+
+        # Clamp to valid range
+        return max(-127, min(value, 127))

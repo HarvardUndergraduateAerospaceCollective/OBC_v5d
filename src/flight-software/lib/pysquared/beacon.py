@@ -42,6 +42,9 @@ except Exception:
 class Beacon:
     """A beacon for sending status messages."""
 
+    # Minimum interval between beacon transmissions (seconds)
+    BEACON_INTERVAL_SECONDS = 30.0
+
     def __init__(
         self,
         logger: Logger,
@@ -72,6 +75,7 @@ class Beacon:
         self._packet_manager: PacketManager = packet_manager
         self._boot_time: float = boot_time
         self._fsm_obj: FSM | None = fsm_obj
+        self._last_beacon_time: float = 0.0  # Track last beacon transmission time
         self._sensors: tuple[
             PowerMonitorProto
             | RadioProto
@@ -85,7 +89,7 @@ class Beacon:
         ] = args
 
     def send(self) -> bool:
-        """Sends the beacon.
+        """Sends the beacon unconditionally.
 
         Returns:
             True if the beacon was sent successfully, False otherwise.
@@ -93,7 +97,26 @@ class Beacon:
         state = self._build_state()
         # Use binary encoding for efficiency
         b = self._encode_binary_state(state)
-        return self._packet_manager.send(b)
+        result = self._packet_manager.send(b)
+        if result:
+            self._last_beacon_time = time.time()
+        return result
+
+    def send_if_interval_elapsed(self) -> bool:
+        """Sends the beacon only if the minimum interval has elapsed.
+
+        This enforces a ~30 second minimum between beacon transmissions
+        for regulatory compliance and power conservation.
+
+        Returns:
+            True if beacon was sent, False if interval not elapsed or send failed.
+        """
+        current_time = time.time()
+        elapsed = current_time - self._last_beacon_time
+        
+        if elapsed >= self.BEACON_INTERVAL_SECONDS:
+            return self.send()
+        return False
 
     def _encode_binary_state(self, state: OrderedDict[str, object]) -> bytes:
         """Encode the state dictionary using binary encoding for efficiency.

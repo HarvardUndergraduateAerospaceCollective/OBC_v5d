@@ -41,8 +41,8 @@ config: Config = Config("config.json")
 jokes_config: JokesConfig = JokesConfig("jokes.json")
 
 # manually set the pin high to allow mcp to be detected
-GPIO_RESET = (
-    initialize_pin(logger, board.GPIO_EXPANDER_RESET, digitalio.Direction.OUTPUT, True),
+GPIO_RESET = initialize_pin(
+    logger, board.GPIO_EXPANDER_RESET, digitalio.Direction.OUTPUT, True
 )
 
 i2c1 = initialize_i2c_bus(

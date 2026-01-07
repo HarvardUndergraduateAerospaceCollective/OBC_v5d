@@ -19,19 +19,12 @@ class DataProcess:
         self.last_imu_time = time.monotonic()
         self.running = True
         self.data = {
-            "data_batt_volt": 0.0,  # battery voltage
-            "data_imu_av": [
-                0.0,
-                0.0,
-                0.0,
-            ],  # imu angular velocity [ax, ay, az] in rad/s²
-            "data_imu_av_magnitude": 0.0,  # imu angular velocity magnitude (Euclidian norm aka length of data_imu_av vector)
-            "data_imu_acc": [
-                0.0,
-                0.0,
-                0.0,
-            ],  # imu acceleration [ax, ay, az] in m/s²" : [0.0,0.0,0.0],             # imu position
-            "data_magnetometer_vector": [0.0, 0.0, 0.0],  # magnetometer vector
+            "data_batt_volt": None,  # battery voltage in V (None = sensor failure)
+            "data_imu_av": None,  # imu angular velocity [ωx, ωy, ωz] in rad/s (None = sensor failure)
+            "data_imu_av_magnitude": None,  # imu angular velocity magnitude in rad/s (None = sensor failure)
+            "data_imu_acc": None,  # imu acceleration [ax, ay, az] in m/s² (None = sensor failure)
+            "data_magnetometer_vector": None,  # magnetometer vector in μT (None = sensor failure)
+            "data_magnetometer_magnitude": None,  # magnetometer magnitude in μT (None = sensor failure)
         }
 
     def start_run_all_data(self):
@@ -63,11 +56,11 @@ class DataProcess:
         while self.running:
             try:
                 if self.protos_power_monitor is None:
-                    # Conservative default: 0V triggers charging mode
-                    voltage = 0.0
+                    # No sensor available
+                    self.data["data_batt_volt"] = None
                 else:
                     voltage = self.protos_power_monitor.get_bus_voltage()._value
-                self.data["data_batt_volt"] = voltage
+                    self.data["data_batt_volt"] = voltage
             except Exception as e:
                 # On sensor read failure, keep last known value and log error
                 print(f"[ERROR] Battery voltage read failed: {e}")
@@ -86,6 +79,9 @@ class DataProcess:
                     ωx, ωy, ωz = imu_acc_data
                     magnitude = (ωx**2 + ωy**2 + ωz**2) ** 0.5
                     self.data["data_imu_av_magnitude"] = magnitude
+                else:
+                    self.data["data_imu_av"] = None
+                    self.data["data_imu_av_magnitude"] = None
             except Exception as e:
                 # On sensor read failure, keep last known value and log error
                 print(f"[ERROR] IMU angular velocity read failed: {e}")
@@ -100,6 +96,8 @@ class DataProcess:
                 if self.protos_imu:
                     imu_acc_data = list(self.protos_imu.get_acceleration().value)
                     self.data["data_imu_acc"] = imu_acc_data
+                else:
+                    self.data["data_imu_acc"] = None
             except Exception as e:
                 # On sensor read failure, keep last known value and log error
                 print(f"[ERROR] IMU acceleration read failed: {e}")
@@ -107,7 +105,7 @@ class DataProcess:
 
     async def get_data_magnetometer_vector(self):
         """
-        Get magnetometer vector
+        Get magnetometer vector and magnitude
         """
         while self.running:
             try:
@@ -115,7 +113,14 @@ class DataProcess:
                     magnetometer_data = list(
                         self.protos_magnetometer.get_magnetic_field().value
                     )
+                    # Compute magnitude for B-dot algorithm
+                    bx, by, bz = magnetometer_data
+                    magnitude = (bx**2 + by**2 + bz**2) ** 0.5
                     self.data["data_magnetometer_vector"] = magnetometer_data
+                    self.data["data_magnetometer_magnitude"] = magnitude
+                else:
+                    self.data["data_magnetometer_vector"] = None
+                    self.data["data_magnetometer_magnitude"] = None
             except Exception as e:
                 # On sensor read failure, keep last known value and log error
                 print(f"[ERROR] Magnetometer read failed: {e}")

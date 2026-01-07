@@ -844,7 +844,6 @@ class CommandDataHandler:
         
         Warning:
             This is potentially dangerous as it allows execution of any code.
-            Use with extreme caution in production environments.
         """
         if len(args) < 1:
             self._log.warning("No code specified for execution")
@@ -876,6 +875,9 @@ class CommandDataHandler:
                 f"Code executed successfully. Output:\n{output}".encode("utf-8")
             )
         except Exception as e:
+            # Restore stdout in case of error
+            import sys
+            sys.stdout = sys.__stdout__
             self._log.error("Failed to execute code", err=e)
             self._packet_manager.send(
                 f"Failed to execute code: {str(e)}".encode("utf-8")

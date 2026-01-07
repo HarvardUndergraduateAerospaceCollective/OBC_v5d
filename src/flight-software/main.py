@@ -62,15 +62,60 @@ logger.info(
 
 logger.debug("Initializing Config")
 
+config = None  # Will be set to either Config or MinimalConfig
 try:
-    config: Config = Config("config.json")
+    config = Config("config.json")
 except Exception as e:
-    logger.debug(f"[WARNING] Config Failed to initialize: {e}")
+    logger.critical("Config Failed to initialize - using hardcoded survival defaults", e)
+    # Minimal fallback config for survival mode - satellite must be able to operate
+    # without config.json in case of filesystem corruption
+    class MinimalConfig:
+        except_reset_allowed_attemps = 3
+        watchdog_reset_sleep = 60
+        sleep_if_yet_deployed_count = 1
+        sleep_if_yet_booted_count = 3
+        critical_battery_voltage = 6.6
+        fsm_batt_threshold_deploy = 7.0
+        fsm_batt_threshold_orient = 6.8
+        longest_allowable_sleep_time = 600
+        cdh_listen_command_timeout = 10
+        cubesat_name = "HUCSat"
+        detumble_gain = 1.0
+        detumble_max_time = 90.0
+        detumble_stabilize_threshold = 0.2
+        detumble_adjust_frequency = 2.0
+        orient_light_threshold = 10.0
+        orient_payload_setting = 1
+        orient_payload_periodic_time = 25.0
+        orient_heat_duration = 10.0
+        deploy_burn_duration = 15.0
+        deploy_max_attempts = 3
+        deploy_retry_delay = 60.0
+        class _MinimalRadioConfig:
+            license = "WP2XZJ"
+            transmit_frequency = 437.4
+            modulation = "LoRa"
+            class lora:
+                spreading_factor = 8
+                coding_rate = 8
+                transmit_power = 23
+                max_output = True
+                ack_delay = 0.2
+                cyclic_redundancy_check = True
+            class fsk:
+                broadcast_address = 255
+                node_address = 1
+                modulation_type = 0
+        
+        radio = _MinimalRadioConfig()
+    config = MinimalConfig()
 
+jokes_config = None
 try:
-    jokes_config: JokesConfig = JokesConfig("jokes.json")
+    jokes_config = JokesConfig("jokes.json")
 except Exception as e:
     logger.debug(f"[WARNING] JokesConfig Failed to initialize: {e}")
+    # Jokes are non-critical, continue without them
 
 
 # +++++++++++++ LOITER TIME +++++++++++++ #
@@ -250,7 +295,8 @@ async def main_async_loop():
 
         try:
             antenna_deployment = BurnwireManager(
-                logger, burnwire_heater_enable, burnwire1_fire, enable_logic=True
+                logger, burnwire_heater_enable, burnwire1_fire,
+                enable_logic=True, watchdog=watchdog
             )
         except Exception as e:
             antenna_deployment = None
@@ -271,9 +317,38 @@ async def main_async_loop():
             logger, board.TX1, digitalio.Direction.OUTPUT, False
         )
 
+        # +++++++++ FACE POWER AND TCA MUX SETUP +++++++++ #
+        def all_faces_off():
+            """
+            This function turns off all of the faces. Note the load switches are enabled low.
+            """
+            FACE0_ENABLE.value = False
+            FACE1_ENABLE.value = False
+            FACE2_ENABLE.value = False
+            FACE3_ENABLE.value = False
+            FACE4_ENABLE.value = False
+
+        def all_faces_on():
+            """
+            This function turns on all of the faces. Note the load switches are enabled high.
+            """
+            FACE0_ENABLE.value = True
+            FACE1_ENABLE.value = True
+            FACE2_ENABLE.value = True
+            FACE3_ENABLE.value = True
+            FACE4_ENABLE.value = True
+
+        # Reset TCA mux and power on faces BEFORE initializing sensors
+        mux_reset = initialize_pin(
+            logger, board.MUX_RESET, digitalio.Direction.OUTPUT, False
+        )
+        all_faces_on()
+        time.sleep(0.1)
+        mux_reset.value = True
+        tca = TCA9548A(i2c0, address=int(0x77))
+
         # +++++++++ INIT LIGHT SENSORS +++++++++ #
         watchdog.pet()
-        tca = TCA9548A(i2c0, address=int(0x77))
         light_sensors = []
         face0_sensor = None
         face1_sensor = None
@@ -311,38 +386,10 @@ async def main_async_loop():
             logger.debug(f"[WARNING] Light sensor 4 failed to initialize {e}")
             light_sensors.append(None)
 
-        def all_faces_off():
-            """
-            This function turns off all of the faces. Note the load switches are enabled low.
-            """
-            FACE0_ENABLE.value = False
-            FACE1_ENABLE.value = False
-            FACE2_ENABLE.value = False
-            FACE3_ENABLE.value = False
-            FACE4_ENABLE.value = False
-
-        def all_faces_on():
-            """
-            This function turns on all of the faces. Note the load switches are enabled high.
-            """
-            FACE0_ENABLE.value = True
-            FACE1_ENABLE.value = True
-            FACE2_ENABLE.value = True
-            FACE3_ENABLE.value = True
-            FACE4_ENABLE.value = True
-
-        mux_reset = initialize_pin(
-            logger, board.MUX_RESET, digitalio.Direction.OUTPUT, False
-        )
-        all_faces_on()
-        time.sleep(0.1)
-        mux_reset.value = True
-        tca = TCA9548A(i2c0, address=int(0x77))  # all 3 connected to high
-
         # +++++++++ INIT DETUMBLER/MAGNETORUQER/IMU +++++++++ #
         watchdog.pet()
         try:
-            detumbler_manager = DetumblerManager(gain=1.0)
+            detumbler_manager = DetumblerManager(gain=config.detumble_gain)
         except Exception as e:
             detumbler_manager = None
             logger.debug(f"[WARNING] DetumblerManager Failed to initialize: {e}")
@@ -486,7 +533,7 @@ async def main_async_loop():
                     time.sleep(config.watchdog_reset_sleep)
 
             if beacon:
-                beacon.send()
+                beacon.send_if_interval_elapsed()
 
             try:
                 if cdh:
@@ -500,8 +547,19 @@ async def main_async_loop():
                     except_reset_count.increment()
                     time.sleep(config.watchdog_reset_sleep)
 
+            try:
+                if uhf_packet_manager:
+                    uhf_packet_manager.send(config.radio.license.encode("utf-8"))
+            except Exception as e:
+                logger.debug(f"[WARNING] uhf_packet_manager failed to send: {e}")
+                # trigger Watchdog hard reset
+                if except_reset_count.get() <= config.except_reset_allowed_attemps:
+                    except_reset_count.increment()
+                    time.sleep(config.watchdog_reset_sleep)
+
+            # Second beacon opportunity (interval still enforced)
             if beacon:
-                beacon.send()
+                beacon.send_if_interval_elapsed()
 
             try:
                 if cdh:
@@ -517,27 +575,59 @@ async def main_async_loop():
 
         try:
             logger.info("Entering main loop")
+            # Reset exception counter on successful main loop entry
+            # This prevents permanent degraded mode after cumulative failures
+            except_reset_count.set(0)
+            logger.info("Exception reset counter cleared on successful boot")
             while True:
                 val = fsm_obj.execute_fsm_step()
-                if (
-                    val == -1
-                    or fsm_obj.dp_obj.data["data_batt_volt"]
-                    <= config.critical_battery_voltage
-                ):
+                current_voltage = fsm_obj.dp_obj.data["data_batt_volt"]
+
+                # Tiered sleep based on battery voltage level
+                # Critical: sleep longer to allow significant recharge
+                # Low (FSM returned -1): sleep moderate amount
+                if current_voltage is not None and current_voltage <= config.critical_battery_voltage:
+                    # Battery critically low - sleep for extended period (10 minutes)
+                    # to allow significant recharge before trying again
+                    logger.warning(
+                        f"[Main] Battery critically low ({current_voltage}V <= {config.critical_battery_voltage}V), "
+                        "sleeping 10 minutes to recharge"
+                    )
                     await safe_sleep_async(
-                        duration=60,
+                        duration=600,  # 10 minutes
                         watchdog=watchdog,
                         logger=logger,
                         watchdog_timeout=15,
-                        max_sleep=300,
+                        max_sleep=config.longest_allowable_sleep_time,
                     )
+                elif val == -1:
+                    # FSM needs more charge (not critical, but below operational threshold)
+                    # Sleep moderate amount (2 minutes)
+                    logger.info(
+                        f"[Main] Battery below operational threshold ({current_voltage}V), "
+                        "sleeping 2 minutes to recharge"
+                    )
+                    await safe_sleep_async(
+                        duration=120,  # 2 minutes
+                        watchdog=watchdog,
+                        logger=logger,
+                        watchdog_timeout=15,
+                        max_sleep=config.longest_allowable_sleep_time,
+                    )
+
                 await asyncio.sleep(1)
                 watchdog.pet()
                 nominal_power_loop()
 
         except Exception as e:
             logger.critical("Critical in Main Loop", e)
-            time.sleep(10)
+            # Pet watchdog during delay to avoid cascade reset
+            for _ in range(5):
+                time.sleep(2)
+                try:
+                    watchdog.pet()
+                except Exception:
+                    pass  # Watchdog may not be accessible
             microcontroller.on_next_reset(microcontroller.RunMode.NORMAL)
             microcontroller.reset()
         finally:

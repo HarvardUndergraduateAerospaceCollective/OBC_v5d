@@ -152,8 +152,9 @@ class LORAConfig:
         ack_delay (float): Acknowledgement delay in seconds.
         coding_rate (int): Coding rate for LoRa.
         cyclic_redundancy_check (bool): CRC enabled flag.
+        max_output (bool): Enable maximum output power (PA_BOOST + PA_DAC).
         spreading_factor (Literal[6, 7, 8, 9, 10, 11, 12]): LoRa spreading factor.
-        transmit_power (int): Transmit power in dBm.
+        transmit_power (int): Transmit power in dBm (ignored if max_output=True).
         LORA_SCHEMA (dict): Validation schema for LoRa configuration keys.
     """
 
@@ -168,6 +169,7 @@ class LORAConfig:
         self.ack_delay: float = lora_dict["ack_delay"]
         self.coding_rate: int = lora_dict["coding_rate"]
         self.cyclic_redundancy_check: bool = lora_dict["cyclic_redundancy_check"]
+        self.max_output: bool = lora_dict["max_output"]
         self.spreading_factor: Literal[6, 7, 8, 9, 10, 11, 12] = lora_dict[
             "spreading_factor"
         ]

@@ -76,6 +76,11 @@ class FSM:
         self.orient_light_intensity = []
         self.payload_light_intensity = 0.0
 
+        # Emergency detumble debounce counter - requires multiple consecutive
+        # readings above threshold to trigger (prevents false triggers from noise)
+        self._emergency_detumble_counter = 0
+        self._emergency_detumble_threshold = 3  # Number of consecutive readings required
+
     def set_state(self, new_state_name):
         """
         This function is called when we switch states from execute_fsm()
@@ -115,42 +120,66 @@ class FSM:
             self.set_state("detumble")
             return 0
 
-        # Emergency Detumble
+        # Emergency Detumble - ONLY check when NOT in bootup state
+        # During bootup, IMU data may be uninitialized/garbage and could trigger false emergency
+        # Also skip if already in detumble state to prevent re-entry loops
         if (
-            self.dp_obj.data["data_imu_av_magnitude"]
+            self.curr_state_name not in ("bootup", "detumble")
+            and self.dp_obj.data["data_imu_av_magnitude"] is not None
+            and self.dp_obj.data["data_imu_av_magnitude"]
             > self.config.detumble_stabilize_threshold * 1.5
         ):  # some added-buffer to not trigger this too much, only in emergency
-            # if we were coming from orient, disable power to payload immediately
-            self.PAYLOAD_BATT_ENABLE.value = False
-            # Don't wait for other state to be done, shut it off immediately
-            self.set_state("detumble")
-            return 0
+            # Debounce: require multiple consecutive readings above threshold
+            self._emergency_detumble_counter += 1
+            if self._emergency_detumble_counter >= self._emergency_detumble_threshold:
+                self.logger.warning(
+                    "[FSM] Emergency detumble triggered after debounce",
+                    av_magnitude=self.dp_obj.data["data_imu_av_magnitude"],
+                    threshold=self.config.detumble_stabilize_threshold * 1.5,
+                    counter=self._emergency_detumble_counter,
+                )
+                # Reset counter for next time
+                self._emergency_detumble_counter = 0
+                # if we were coming from orient, disable power to payload immediately
+                self.PAYLOAD_BATT_ENABLE.value = False
+                # Don't wait for other state to be done, shut it off immediately
+                self.set_state("detumble")
+                return 0
+        else:
+            # Reset debounce counter if reading is normal
+            self._emergency_detumble_counter = 0
 
         # Detumble → Deploy or Orient
+        # Guard against None battery voltage (sensor failure) - stay in detumble if unknown
+        batt_volt = self.dp_obj.data["data_batt_volt"]
         if self.curr_state_name == "detumble" and self.curr_state_object.is_done():
-            if (
+            if batt_volt is None:
+                # Battery sensor failure - stay in detumble (conservative)
+                return -1
+            elif (
                 self.deployed
-                and self.dp_obj.data["data_batt_volt"]
-                > self.config.fsm_batt_threshold_orient
+                and batt_volt > self.config.fsm_batt_threshold_orient
             ):
                 self.set_state("orient")
+                return 0
             elif (
                 not self.deployed
-                and self.dp_obj.data["data_batt_volt"]
-                > self.config.fsm_batt_threshold_deploy
+                and batt_volt > self.config.fsm_batt_threshold_deploy
             ):
                 # Don't set deployed flag yet - wait until burnwire actually fires
                 self.set_state("deploy")
+                return 0
             else:
                 # Let the main file know we need to charge a bit more
                 return -1
 
         # Deploy → Orient
+        # Guard against None battery voltage
         if (
             self.curr_state_name == "deploy"
             and self.curr_state_object.is_done()
-            and self.dp_obj.data["data_batt_volt"]
-            > self.config.fsm_batt_threshold_orient
+            and batt_volt is not None
+            and batt_volt > self.config.fsm_batt_threshold_orient
         ):
             # Mark deployment as complete and persist to NVM
             if not self.deployed:
@@ -169,8 +198,7 @@ class FSM:
         elif (
             self.curr_state_name == "deploy"
             and self.curr_state_object.is_done()
-            and self.dp_obj.data["data_batt_volt"]
-            < self.config.fsm_batt_threshold_orient
+            and (batt_volt is None or batt_volt < self.config.fsm_batt_threshold_orient)
         ):
             # Let the main file know we need to charge a bit more
             return -1

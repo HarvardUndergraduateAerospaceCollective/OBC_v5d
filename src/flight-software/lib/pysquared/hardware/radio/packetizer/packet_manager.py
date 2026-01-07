@@ -72,12 +72,16 @@ class PacketManager:
         total_packets: int = len(packets)
         self._logger.debug("Sending packets...", num_packets=total_packets)
 
-        for packet in packets:
-            self._radio.send(packet)
+        try:
+            for packet in packets:
+                self._radio.send(packet)
 
-            # Only add send delay if there are multiple packets
-            if len(packets) > 1:
-                time.sleep(self._send_delay)
+                # Only add send delay if there are multiple packets
+                if len(packets) > 1:
+                    time.sleep(self._send_delay)
+        except Exception as e:
+            self._logger.error("Failed to send packet", e)
+            return False
 
         self._logger.debug(
             "Successfully sent all the packets!", num_packets=total_packets
