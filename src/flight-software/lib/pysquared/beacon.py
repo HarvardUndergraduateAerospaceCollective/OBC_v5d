@@ -245,8 +245,9 @@ class Beacon:
                 "fsm_orient_payload_light_intensity": str(
                     self._fsm_obj.payload_light_intensity
                 ),
-                "dp_obj_data": str(self._fsm_obj.dp_obj.data.items()),
             }
+            for key, value in self._fsm_obj.dp_obj.data.items():
+                state["FSM"][str(key)] = str(value)
         else:
             state["FSM"] = {}
 
