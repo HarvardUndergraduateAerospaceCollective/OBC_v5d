@@ -14,15 +14,13 @@ burnwire.burn()
 """
 
 import time
-from typing import TYPE_CHECKING
 
 from digitalio import DigitalInOut
 
 from ....logger import Logger
 from ....protos.burnwire import BurnwireProto
 
-if TYPE_CHECKING:
-    from ....watchdog import Watchdog
+from ....watchdog import Watchdog
 
 
 class BurnwireManager(BurnwireProto):

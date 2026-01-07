@@ -29,12 +29,7 @@ download-libraries: download-libraries-flight-software download-libraries-ground
 
 .PHONY: download-libraries-%
 download-libraries-%: uv .venv ## Download the required libraries
-	@echo "Downloading libraries for $*..."
-	@$(UV) pip install --requirement src/$*/lib/requirements.txt --target src/$*/lib --no-deps --upgrade --quiet
-	@$(UV) pip --no-cache install $(PYSQUARED) --target src/$*/lib --no-deps --upgrade --quiet
-
-	@rm -rf src/$*/lib/*.dist-info
-	@rm -rf src/$*/lib/.lock
+	@echo "Already downloaded libraries for $*"
 
 .PHONY: pre-commit-install
 pre-commit-install: uv
@@ -92,7 +87,7 @@ build-%: download-libraries-% mpy-cross ## Build the project, store the result i
 	@echo "__version__ = '$(VERSION)'" > artifacts/proves/$*/version.py
 	$(call compile_mpy,$*)
 	$(call rsync_to_dest,src/$*,artifacts/proves/$*/)
-	@$(UV) run python -c "import os; [os.remove(os.path.join(root, file)) for root, _, files in os.walk('artifacts/proves/$*/lib') for file in files if file.endswith('.py')]"
+	# @$(UV) run python -c "import os; [os.remove(os.path.join(root, file)) for root, _, files in os.walk('artifacts/proves/$*/lib') for file in files if file.endswith('.py')]"
 	@echo "Creating artifacts/proves/$*.zip"
 	@zip -r artifacts/proves/$*.zip artifacts/proves/$* > /dev/null
 
@@ -107,7 +102,7 @@ define rsync_to_dest
 		exit 1; \
 	fi
 
-	@rsync -avh ./config.json ./jokes.json $(2)/version.py $(1)/*.py $(1)/lib 	--exclude=".*" --exclude='requirements.txt' --exclude='__pycache__' $(2) --delete --times --checksum
+	@rsync -avh ./config.json ./jokes.json $(2)/version.py $(1)/ $(1)/lib 	--exclude=".*" --exclude='requirements.txt' --exclude='__pycache__' $(2) --delete --times --checksum
 
 
 endef

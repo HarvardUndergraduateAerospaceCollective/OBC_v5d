@@ -42,8 +42,7 @@ class StateDeploy:
 
                     for attempt in range(num_burns):
                         self.logger.info(
-                            f"[Deploy] Burn attempt {attempt + 1}/{num_burns}, "
-                            f"duration={self.config.deploy_burn_duration}s"
+                            f"[Deploy] Burn attempt {attempt + 1}/{num_burns}, duration={self.config.deploy_burn_duration}s"
                         )
                         self.deployment_switch.burn(self.config.deploy_burn_duration)
 

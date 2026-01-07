@@ -222,7 +222,7 @@ class Beacon:
         """
         state: OrderedDict[str, object] = OrderedDict()
         self._add_system_info(state)
-        self._add_sensor_data(state)
+        #self._add_sensor_data(state)
         return state
 
     def _add_system_info(self, state: OrderedDict[str, object]) -> None:
