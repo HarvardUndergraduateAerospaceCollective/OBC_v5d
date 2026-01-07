@@ -37,8 +37,8 @@ class StateDeploy:
             # Burn the wire if not already done to release the antennas
             if not self.finished_burn:
                 if self.deployment_switch:
-                    num_burns = getattr(self.config, 'deploy_max_attempts', 3)
-                    retry_delay = getattr(self.config, 'deploy_retry_delay', 60.0)
+                    num_burns = getattr(self.config, "deploy_max_attempts", 3)
+                    retry_delay = getattr(self.config, "deploy_retry_delay", 60.0)
 
                     for attempt in range(num_burns):
                         self.logger.info(

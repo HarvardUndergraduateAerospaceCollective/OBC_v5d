@@ -79,7 +79,9 @@ class FSM:
         # Emergency detumble debounce counter - requires multiple consecutive
         # readings above threshold to trigger (prevents false triggers from noise)
         self._emergency_detumble_counter = 0
-        self._emergency_detumble_threshold = 3  # Number of consecutive readings required
+        self._emergency_detumble_threshold = (
+            3  # Number of consecutive readings required
+        )
 
     def set_state(self, new_state_name):
         """
@@ -156,15 +158,11 @@ class FSM:
             if batt_volt is None:
                 # Battery sensor failure - stay in detumble (conservative)
                 return -1
-            elif (
-                self.deployed
-                and batt_volt > self.config.fsm_batt_threshold_orient
-            ):
+            elif self.deployed and batt_volt > self.config.fsm_batt_threshold_orient:
                 self.set_state("orient")
                 return 0
             elif (
-                not self.deployed
-                and batt_volt > self.config.fsm_batt_threshold_deploy
+                not self.deployed and batt_volt > self.config.fsm_batt_threshold_deploy
             ):
                 # Don't set deployed flag yet - wait until burnwire actually fires
                 self.set_state("deploy")

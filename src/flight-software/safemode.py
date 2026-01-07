@@ -3,7 +3,6 @@
 This file is executed when CircuitPython enters safe mode (after hard faults,
 watchdog resets, etc.). It provides diagnostic information and attempts recovery.
 """
-import time
 
 import microcontroller
 

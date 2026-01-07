@@ -171,8 +171,7 @@ class BurnwireManager(BurnwireProto):
             while time.monotonic() < end_time:
                 # Sleep for watchdog interval or remaining time, whichever is shorter
                 sleep_time = min(
-                    end_time - time.monotonic(),
-                    self.WATCHDOG_PET_INTERVAL_SEC
+                    end_time - time.monotonic(), self.WATCHDOG_PET_INTERVAL_SEC
                 )
                 if sleep_time > 0:
                     time.sleep(sleep_time)

@@ -18,6 +18,7 @@ import json
 import time
 from collections import OrderedDict
 
+from fsm.fsm import FSM
 from microcontroller import Processor
 
 from .binary_encoder import BinaryDecoder, BinaryEncoder
@@ -31,7 +32,6 @@ from .protos.power_monitor import PowerMonitorProto
 from .protos.radio import RadioProto
 from .protos.temperature_sensor import TemperatureSensorProto
 from .sensor_reading.avg import avg_readings
-from fsm.fsm import FSM
 
 try:
     from typing import OrderedDict
@@ -51,7 +51,7 @@ class Beacon:
         name: str,
         packet_manager: PacketManager,
         boot_time: float,
-        fsm_obj: FSM | None = None, 
+        fsm_obj: FSM | None = None,
         *args: PowerMonitorProto
         | RadioProto
         | IMUProto
@@ -113,7 +113,7 @@ class Beacon:
         """
         current_time = time.time()
         elapsed = current_time - self._last_beacon_time
-        
+
         if elapsed >= self.BEACON_INTERVAL_SECONDS:
             return self.send()
         return False
@@ -237,10 +237,14 @@ class Beacon:
             state["FSM"] = {
                 "fsm_current_state": str(self._fsm_obj.curr_state_name),
                 "fsm_deployed": str(self._fsm_obj.deployed),
-                "fsm_orient_payload_setting": str(self._fsm_obj.config.orient_payload_setting),
+                "fsm_orient_payload_setting": str(
+                    self._fsm_obj.config.orient_payload_setting
+                ),
                 "fsm_orient_best_direction": str(self._fsm_obj.orient_best_direction),
                 "fsm_orient_light_intensity": str(self._fsm_obj.orient_light_intensity),
-                "fsm_orient_payload_light_intensity": str(self._fsm_obj.payload_light_intensity),
+                "fsm_orient_payload_light_intensity": str(
+                    self._fsm_obj.payload_light_intensity
+                ),
                 "dp_obj_data": str(self._fsm_obj.dp_obj.data.items()),
             }
         else:

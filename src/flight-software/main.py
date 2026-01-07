@@ -66,7 +66,10 @@ config = None  # Will be set to either Config or MinimalConfig
 try:
     config = Config("config.json")
 except Exception as e:
-    logger.critical("Config Failed to initialize - using hardcoded survival defaults", e)
+    logger.critical(
+        "Config Failed to initialize - using hardcoded survival defaults", e
+    )
+
     # Minimal fallback config for survival mode - satellite must be able to operate
     # without config.json in case of filesystem corruption
     class MinimalConfig:
@@ -91,10 +94,12 @@ except Exception as e:
         deploy_burn_duration = 15.0
         deploy_max_attempts = 3
         deploy_retry_delay = 60.0
+
         class _MinimalRadioConfig:
             license = "WP2XZJ"
             transmit_frequency = 437.4
             modulation = "LoRa"
+
             class lora:
                 spreading_factor = 8
                 coding_rate = 8
@@ -102,12 +107,14 @@ except Exception as e:
                 max_output = True
                 ack_delay = 0.2
                 cyclic_redundancy_check = True
+
             class fsk:
                 broadcast_address = 255
                 node_address = 1
                 modulation_type = 0
-        
+
         radio = _MinimalRadioConfig()
+
     config = MinimalConfig()
 
 jokes_config = None
@@ -295,8 +302,11 @@ async def main_async_loop():
 
         try:
             antenna_deployment = BurnwireManager(
-                logger, burnwire_heater_enable, burnwire1_fire,
-                enable_logic=True, watchdog=watchdog
+                logger,
+                burnwire_heater_enable,
+                burnwire1_fire,
+                enable_logic=True,
+                watchdog=watchdog,
             )
         except Exception as e:
             antenna_deployment = None
@@ -476,7 +486,10 @@ async def main_async_loop():
                 except_reset_count.increment()
                 microcontroller.reset()
             else:
-                logger.critical("Exceeded reset attempts - continuing without battery monitor!", Exception("No battery monitor"))
+                logger.critical(
+                    "Exceeded reset attempts - continuing without battery monitor!",
+                    Exception("No battery monitor"),
+                )
 
         # +++++++++ INIT DP OBJ AND FSM +++++++++ #
         watchdog.pet()
@@ -486,12 +499,12 @@ async def main_async_loop():
             battery_power_monitor=battery_power_monitor,
         )
         dp_obj.start_run_all_data()
-        
+
         # Wait for sensor data to initialize before FSM starts
         logger.info("[INFO] Waiting for sensor data initialization...")
         await asyncio.sleep(2)
         logger.info(f"[INFO] Initial battery voltage: {dp_obj.data['data_batt_volt']}V")
-        
+
         fsm_obj = FSM(
             dp_obj,
             logger,
@@ -586,7 +599,10 @@ async def main_async_loop():
                 # Tiered sleep based on battery voltage level
                 # Critical: sleep longer to allow significant recharge
                 # Low (FSM returned -1): sleep moderate amount
-                if current_voltage is not None and current_voltage <= config.critical_battery_voltage:
+                if (
+                    current_voltage is not None
+                    and current_voltage <= config.critical_battery_voltage
+                ):
                     # Battery critically low - sleep for extended period (10 minutes)
                     # to allow significant recharge before trying again
                     logger.warning(

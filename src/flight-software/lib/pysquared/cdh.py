@@ -41,20 +41,20 @@ class CommandDataHandler:
     command_change_orient_payload_periodic_time: str = "orient_payload_periodic_time"
     command_change_orient_light_threshold: str = "orient_light_threshold"
     command_change_orient_heat_duration: str = "orient_heat_duration"
-    command_change_fsm_batt_threshold_orient : str = "fsm_batt_threshold_orient"
-    command_change_fsm_batt_threshold_deploy : str = "fsm_batt_threshold_deploy"
-    command_change_deploy_burn_duration : str = "deploy_burn_duration"
-    command_change_detumble_adjust_frequency : str = "detumble_adjust_frequency"
-    command_change_detumble_stabilize_threshold : str = "detumble_stabilize_threshold"
-    command_change_detumble_max_time : str = "detumble_max_time"
-    command_change_critical_battery_voltage : str = "critical_battery_voltage"
-    command_change_degraded_battery_voltage : str = "degraded_battery_voltage"
-    command_change_sleep_if_yet_booted_count : str = "sleep_if_yet_booted_count"
-    command_change_sleep_if_yet_deployed_count : str = "sleep_if_yet_deployed_count"
-    command_change_cdh_listen_command_timeout : str = "cdh_listen_command_timeout"
-    command_change_watchdog_reset_sleep : str = "watchdog_reset_sleep"
-    command_change_except_reset_allowed_attemps : str = "except_reset_allowed_attemps"
-    
+    command_change_fsm_batt_threshold_orient: str = "fsm_batt_threshold_orient"
+    command_change_fsm_batt_threshold_deploy: str = "fsm_batt_threshold_deploy"
+    command_change_deploy_burn_duration: str = "deploy_burn_duration"
+    command_change_detumble_adjust_frequency: str = "detumble_adjust_frequency"
+    command_change_detumble_stabilize_threshold: str = "detumble_stabilize_threshold"
+    command_change_detumble_max_time: str = "detumble_max_time"
+    command_change_critical_battery_voltage: str = "critical_battery_voltage"
+    command_change_degraded_battery_voltage: str = "degraded_battery_voltage"
+    command_change_sleep_if_yet_booted_count: str = "sleep_if_yet_booted_count"
+    command_change_sleep_if_yet_deployed_count: str = "sleep_if_yet_deployed_count"
+    command_change_cdh_listen_command_timeout: str = "cdh_listen_command_timeout"
+    command_change_watchdog_reset_sleep: str = "watchdog_reset_sleep"
+    command_change_except_reset_allowed_attemps: str = "except_reset_allowed_attemps"
+
     oscar_password: str = "Hello World!"  # Default password for OSCAR commands
 
     def __init__(
@@ -272,10 +272,14 @@ class CommandDataHandler:
         orient_payload_setting = int(args[0])
 
         try:
-            self._config.update_config("orient_payload_setting", orient_payload_setting, temporary=False)
+            self._config.update_config(
+                "orient_payload_setting", orient_payload_setting, temporary=False
+            )
             self._log.info("Orient payload setting changed")
             self._packet_manager.send(
-                f"Orient payload setting time changed: {orient_payload_setting}".encode("utf-8")
+                f"Orient payload setting time changed: {orient_payload_setting}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change orient periodic time", err=e)
@@ -303,10 +307,16 @@ class CommandDataHandler:
         orient_payload_periodic_time = float(args[0])
 
         try:
-            self._config.update_config("orient_payload_periodic_time", orient_payload_periodic_time, temporary=False)
+            self._config.update_config(
+                "orient_payload_periodic_time",
+                orient_payload_periodic_time,
+                temporary=False,
+            )
             self._log.info("Orient periodic time changed")
             self._packet_manager.send(
-                f"Orient periodic time changed: {orient_payload_periodic_time}".encode("utf-8")
+                f"Orient periodic time changed: {orient_payload_periodic_time}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change orient periodic time", err=e)
@@ -334,10 +344,14 @@ class CommandDataHandler:
         orient_light_threshold = float(args[0])
 
         try:
-            self._config.update_config("orient_light_threshold", orient_light_threshold, temporary=False)
+            self._config.update_config(
+                "orient_light_threshold", orient_light_threshold, temporary=False
+            )
             self._log.info("Orient light threhsold changed")
             self._packet_manager.send(
-                f"Orient light threhsold changed: {orient_light_threshold}".encode("utf-8")
+                f"Orient light threhsold changed: {orient_light_threshold}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change orient light threshold", err=e)
@@ -365,7 +379,9 @@ class CommandDataHandler:
         orient_heat_duration = float(args[0])
 
         try:
-            self._config.update_config("orient_heat_duration", orient_heat_duration, temporary=False)
+            self._config.update_config(
+                "orient_heat_duration", orient_heat_duration, temporary=False
+            )
             self._log.info("Orient heat duration changed")
             self._packet_manager.send(
                 f"Orient heat duration changed: {orient_heat_duration}".encode("utf-8")
@@ -387,9 +403,7 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No orient battery threshold specified")
             self._packet_manager.send(
-                "No orient battery threshold specified.".encode(
-                    "utf-8"
-                )
+                "No orient battery threshold specified.".encode("utf-8")
             )
             return
 
@@ -398,15 +412,21 @@ class CommandDataHandler:
         # OK if too high- will be ignored
 
         try:
-            self._config.update_config("fsm_batt_threshold_orient", fsm_batt_threshold_orient, temporary=False)
+            self._config.update_config(
+                "fsm_batt_threshold_orient", fsm_batt_threshold_orient, temporary=False
+            )
             self._log.info("Orient battery threshold changed")
             self._packet_manager.send(
-                f"Orient battery threshold changed: {fsm_batt_threshold_orient}".encode("utf-8")
+                f"Orient battery threshold changed: {fsm_batt_threshold_orient}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change orient battery threshold", err=e)
             self._packet_manager.send(
-                f"Failed to change orient battery threshold changed: {e}".encode("utf-8")
+                f"Failed to change orient battery threshold changed: {e}".encode(
+                    "utf-8"
+                )
             )
 
     def change_fsm_batt_threshold_deploy(self, args: list[str]) -> None:
@@ -420,9 +440,7 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No deploy battery threshold specified")
             self._packet_manager.send(
-                "No deploy battery threshold specified.".encode(
-                    "utf-8"
-                )
+                "No deploy battery threshold specified.".encode("utf-8")
             )
             return
 
@@ -431,15 +449,21 @@ class CommandDataHandler:
         # OK if too high- will be ignored
 
         try:
-            self._config.update_config("fsm_batt_threshold_deploy", fsm_batt_threshold_deploy, temporary=False)
+            self._config.update_config(
+                "fsm_batt_threshold_deploy", fsm_batt_threshold_deploy, temporary=False
+            )
             self._log.info("Deploy battery threshold changed")
             self._packet_manager.send(
-                f"Deploy battery threshold changed: {fsm_batt_threshold_deploy}".encode("utf-8")
+                f"Deploy battery threshold changed: {fsm_batt_threshold_deploy}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change deploy battery threshold", err=e)
             self._packet_manager.send(
-                f"Failed to change deploy battery threshold changed: {e}".encode("utf-8")
+                f"Failed to change deploy battery threshold changed: {e}".encode(
+                    "utf-8"
+                )
             )
 
     def change_deploy_burn_duration(self, args: list[str]) -> None:
@@ -453,16 +477,16 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No deploy burn duration specified")
             self._packet_manager.send(
-                "No deploy burn duration specified.".encode(
-                    "utf-8"
-                )
+                "No deploy burn duration specified.".encode("utf-8")
             )
             return
 
         deploy_burn_duration = float(args[0])
 
         try:
-            self._config.update_config("deploy_burn_duration", deploy_burn_duration, temporary=False)
+            self._config.update_config(
+                "deploy_burn_duration", deploy_burn_duration, temporary=False
+            )
             self._log.info("Deploy burn duration changed")
             self._packet_manager.send(
                 f"Deploy burn duration changed: {deploy_burn_duration}".encode("utf-8")
@@ -484,19 +508,21 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No detumble_adjust_frequency specified")
             self._packet_manager.send(
-                "No detumble_adjust_frequency specified.".encode(
-                    "utf-8"
-                )
+                "No detumble_adjust_frequency specified.".encode("utf-8")
             )
             return
 
         detumble_adjust_frequency = float(args[0])
 
         try:
-            self._config.update_config("detumble_adjust_frequency", detumble_adjust_frequency, temporary=False)
+            self._config.update_config(
+                "detumble_adjust_frequency", detumble_adjust_frequency, temporary=False
+            )
             self._log.info("Detumble adjust frequency changed")
             self._packet_manager.send(
-                f"Detumble adjust frequency changed: {detumble_adjust_frequency}".encode("utf-8")
+                f"Detumble adjust frequency changed: {detumble_adjust_frequency}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change detumble adjust frequency", err=e)
@@ -515,19 +541,23 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No detumble stabilize threshold specified")
             self._packet_manager.send(
-                "No detumble stabilize threshold specified.".encode(
-                    "utf-8"
-                )
+                "No detumble stabilize threshold specified.".encode("utf-8")
             )
             return
 
         detumble_stabilize_threshold = float(args[0])
 
         try:
-            self._config.update_config("detumble_stabilize_threshold", detumble_stabilize_threshold, temporary=False)
+            self._config.update_config(
+                "detumble_stabilize_threshold",
+                detumble_stabilize_threshold,
+                temporary=False,
+            )
             self._log.info("Detumble stabilize threshold changed")
             self._packet_manager.send(
-                f"Detumble stabilize threshold changed: {detumble_stabilize_threshold}".encode("utf-8")
+                f"Detumble stabilize threshold changed: {detumble_stabilize_threshold}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change detumble stabilize threshold", err=e)
@@ -545,17 +575,15 @@ class CommandDataHandler:
 
         if len(args) < 1:
             self._log.warning("No detumble max time specified")
-            self._packet_manager.send(
-                "No detumble max time specified.".encode(
-                    "utf-8"
-                )
-            )
+            self._packet_manager.send("No detumble max time specified.".encode("utf-8"))
             return
 
         detumble_max_time = float(args[0])
 
         try:
-            self._config.update_config("detumble_max_time", detumble_max_time, temporary=False)
+            self._config.update_config(
+                "detumble_max_time", detumble_max_time, temporary=False
+            )
             self._log.info("Detumble max time changed")
             self._packet_manager.send(
                 f"Detumble max time changed: {detumble_max_time}".encode("utf-8")
@@ -565,7 +593,7 @@ class CommandDataHandler:
             self._packet_manager.send(
                 f"Failed to change detumble max time: {e}".encode("utf-8")
             )
-    
+
     def change_critical_battery_voltage(self, args: list[str]) -> None:
         """Changes the critical battery voltage (in Watts)
 
@@ -577,26 +605,28 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No critical battery voltage specified")
             self._packet_manager.send(
-                "No critical battery voltage specified.".encode(
-                    "utf-8"
-                )
+                "No critical battery voltage specified.".encode("utf-8")
             )
             return
 
         critical_battery_voltage = float(args[0])
 
         try:
-            self._config.update_config("critical_battery_voltage", critical_battery_voltage, temporary=False)
+            self._config.update_config(
+                "critical_battery_voltage", critical_battery_voltage, temporary=False
+            )
             self._log.info("Critical battery voltage changed")
             self._packet_manager.send(
-                f"Critical battery voltage changed: {critical_battery_voltage}".encode("utf-8")
+                f"Critical battery voltage changed: {critical_battery_voltage}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change critical battery voltage", err=e)
             self._packet_manager.send(
                 f"Failed to change critical battery voltage: {e}".encode("utf-8")
             )
-    
+
     def change_degraded_battery_voltage(self, args: list[str]) -> None:
         """Changes the degraded battery voltage (in Watts)
 
@@ -608,19 +638,21 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No degraded battery voltage specified")
             self._packet_manager.send(
-                "No degraded battery voltage specified.".encode(
-                    "utf-8"
-                )
+                "No degraded battery voltage specified.".encode("utf-8")
             )
             return
 
         degraded_battery_voltage = float(args[0])
 
         try:
-            self._config.update_config("degraded_battery_voltage", degraded_battery_voltage, temporary=False)
+            self._config.update_config(
+                "degraded_battery_voltage", degraded_battery_voltage, temporary=False
+            )
             self._log.info("Degraded battery voltage changed")
             self._packet_manager.send(
-                f"Degraded battery voltage changed: {degraded_battery_voltage}".encode("utf-8")
+                f"Degraded battery voltage changed: {degraded_battery_voltage}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change degraded battery voltage", err=e)
@@ -639,19 +671,21 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No sleep condition for boot count specified")
             self._packet_manager.send(
-                "No sleep condition for boot count specified.".encode(
-                    "utf-8"
-                )
+                "No sleep condition for boot count specified.".encode("utf-8")
             )
             return
 
         sleep_if_yet_booted_count = int(args[0])
 
         try:
-            self._config.update_config("sleep_if_yet_booted_count", sleep_if_yet_booted_count, temporary=False)
+            self._config.update_config(
+                "sleep_if_yet_booted_count", sleep_if_yet_booted_count, temporary=False
+            )
             self._log.info("Sleep if yet booted value changed")
             self._packet_manager.send(
-                f"Sleep if yet booted value changed: {sleep_if_yet_booted_count}".encode("utf-8")
+                f"Sleep if yet booted value changed: {sleep_if_yet_booted_count}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change sleep condition for boot count", err=e)
@@ -670,26 +704,34 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No sleep condition for deployed count specified")
             self._packet_manager.send(
-                "No sleep condition for deployed count specified.".encode(
-                    "utf-8"
-                )
+                "No sleep condition for deployed count specified.".encode("utf-8")
             )
             return
 
         sleep_if_yet_deployed_count = int(args[0])
 
         try:
-            self._config.update_config("sleep_if_yet_deployed_count", sleep_if_yet_deployed_count, temporary=False)
+            self._config.update_config(
+                "sleep_if_yet_deployed_count",
+                sleep_if_yet_deployed_count,
+                temporary=False,
+            )
             self._log.info("Sleep if yet deployed value changed")
             self._packet_manager.send(
-                f"Sleep if yet deployed value changed: {sleep_if_yet_deployed_count}".encode("utf-8")
+                f"Sleep if yet deployed value changed: {sleep_if_yet_deployed_count}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
-            self._log.error("Failed to change sleep condition for deployed count", err=e)
-            self._packet_manager.send(
-                f"Failed to change sleep condition for deployed count: {e}".encode("utf-8")
+            self._log.error(
+                "Failed to change sleep condition for deployed count", err=e
             )
-    
+            self._packet_manager.send(
+                f"Failed to change sleep condition for deployed count: {e}".encode(
+                    "utf-8"
+                )
+            )
+
     def change_cdh_listen_command_timeout(self, args: list[str]) -> None:
         """Changes the cdh listen command timeout
 
@@ -701,19 +743,23 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No cdh listen command timeout specified")
             self._packet_manager.send(
-                "No cdh listen command timeout specified.".encode(
-                    "utf-8"
-                )
+                "No cdh listen command timeout specified.".encode("utf-8")
             )
             return
 
         cdh_listen_command_timeout = int(args[0])
 
         try:
-            self._config.update_config("cdh_listen_command_timeout", cdh_listen_command_timeout, temporary=False)
+            self._config.update_config(
+                "cdh_listen_command_timeout",
+                cdh_listen_command_timeout,
+                temporary=False,
+            )
             self._log.info("cdh listen command timeout changed")
             self._packet_manager.send(
-                f"cdh listen command timeout changed: {cdh_listen_command_timeout}".encode("utf-8")
+                f"cdh listen command timeout changed: {cdh_listen_command_timeout}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change cdh listen command timeout", err=e)
@@ -732,16 +778,16 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No watchdog_reset_sleep specified")
             self._packet_manager.send(
-                "No watchdog_reset_sleep specified.".encode(
-                    "utf-8"
-                )
+                "No watchdog_reset_sleep specified.".encode("utf-8")
             )
             return
 
         watchdog_reset_sleep = int(args[0])
 
         try:
-            self._config.update_config("watchdog_reset_sleep", watchdog_reset_sleep, temporary=False)
+            self._config.update_config(
+                "watchdog_reset_sleep", watchdog_reset_sleep, temporary=False
+            )
             self._log.info("watchdog_reset_sleep changed")
             self._packet_manager.send(
                 f"watchdog_reset_sleep changed: {watchdog_reset_sleep}".encode("utf-8")
@@ -763,19 +809,23 @@ class CommandDataHandler:
         if len(args) < 1:
             self._log.warning("No except_reset_allowed_attemps specified")
             self._packet_manager.send(
-                "No except_reset_allowed_attemps specified.".encode(
-                    "utf-8"
-                )
+                "No except_reset_allowed_attemps specified.".encode("utf-8")
             )
             return
 
         except_reset_allowed_attemps = int(args[0])
 
         try:
-            self._config.update_config("except_reset_allowed_attemps", except_reset_allowed_attemps, temporary=False)
+            self._config.update_config(
+                "except_reset_allowed_attemps",
+                except_reset_allowed_attemps,
+                temporary=False,
+            )
             self._log.info("except_reset_allowed_attemps changed")
             self._packet_manager.send(
-                f"except_reset_allowed_attemps changed: {except_reset_allowed_attemps}".encode("utf-8")
+                f"except_reset_allowed_attemps changed: {except_reset_allowed_attemps}".encode(
+                    "utf-8"
+                )
             )
         except ValueError as e:
             self._log.error("Failed to change except_reset_allowed_attemps", err=e)
@@ -825,23 +875,31 @@ class CommandDataHandler:
     def set_orient_payload(self, args: list[str]):
         try:
             if len(args) < 1:
-                self._log.debug("Not enough arguments for orient_payload command. Requires setting (ex: 0 or 1).")
+                self._log.debug(
+                    "Not enough arguments for orient_payload command. Requires setting (ex: 0 or 1)."
+                )
                 return
             orient_payload_setting = args[0]
             if str(orient_payload_setting) in ["0", "1"]:
-                self._config.update_config("orient_payload_setting", int(orient_payload_setting), temporary=False)
+                self._config.update_config(
+                    "orient_payload_setting",
+                    int(orient_payload_setting),
+                    temporary=False,
+                )
             else:
                 self._log.debug("Invalid orient payload setting.  Set as 0 or 1")
         except ValueError as e:
             self._log.error("Failed to change orient modulation", err=e)
-        self._packet_manager.send(f"New feature executed with args: {args}".encode("utf-8"))
-    
+        self._packet_manager.send(
+            f"New feature executed with args: {args}".encode("utf-8")
+        )
+
     def exec_command(self, args: list[str]) -> None:
         """Executes arbitrary Python code sent from the ground station.
-        
+
         Args:
             args: A list of arguments, where all items joined together form the Python code to execute.
-        
+
         Warning:
             This is potentially dangerous as it allows execution of any code.
         """
@@ -851,25 +909,26 @@ class CommandDataHandler:
                 "No code specified for execution.".encode("utf-8")
             )
             return
-        
+
         code_to_execute = " ".join(args)
         self._log.info("Executing code", code=code_to_execute)
-        
+
         try:
             # Create a string buffer to capture output
             import io
             import sys
+
             original_stdout = sys.stdout
             captured_output = io.StringIO()
             sys.stdout = captured_output
-            
+
             # Execute the code
             exec(code_to_execute)
-            
+
             # Restore stdout and get the output
             sys.stdout = original_stdout
             output = captured_output.getvalue()
-            
+
             self._log.info("Code executed successfully")
             self._packet_manager.send(
                 f"Code executed successfully. Output:\n{output}".encode("utf-8")
@@ -877,6 +936,7 @@ class CommandDataHandler:
         except Exception as e:
             # Restore stdout in case of error
             import sys
+
             sys.stdout = sys.__stdout__
             self._log.error("Failed to execute code", err=e)
             self._packet_manager.send(

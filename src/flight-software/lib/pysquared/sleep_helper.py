@@ -64,7 +64,9 @@ class SleepHelper:
         # Sleep in increments to allow for watchdog to be pet
         while time.monotonic() < end_sleep_time:
             # Guard against negative time (can occur if processing delays exceed remaining time)
-            time_increment = max(0, min(end_sleep_time - time.monotonic(), watchdog_timeout))
+            time_increment = max(
+                0, min(end_sleep_time - time.monotonic(), watchdog_timeout)
+            )
             if time_increment == 0:
                 break  # No time remaining
 

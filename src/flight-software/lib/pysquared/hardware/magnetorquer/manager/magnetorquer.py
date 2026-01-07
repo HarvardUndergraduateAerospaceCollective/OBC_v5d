@@ -202,7 +202,9 @@ class MagnetorquerManager(MagnetorquerProto):
             # Set Z-axis current using signed conversion
             # Z- coil has direction_sign = -1, so we negate the current
             # to get the correct drive level for the physical coil orientation
-            z_value = self._current_to_drv_value_signed(-z_current, self._coil_max_current_z)
+            z_value = self._current_to_drv_value_signed(
+                -z_current, self._coil_max_current_z
+            )
             # if we don't have magnetic field, set z_value to arbitrarily high
             # set it to the max value that the DRV can take, 127
             if set_z_high:
