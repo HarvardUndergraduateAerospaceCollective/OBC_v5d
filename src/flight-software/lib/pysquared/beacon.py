@@ -239,7 +239,7 @@ class Beacon:
                 "state": str(self._fsm_obj.curr_state_name),
                 "depl": bool(self._fsm_obj.deployed),
                 "pay_set": self._fsm_obj.config.orient_payload_setting,
-                "pan_light": [0.0,0.0,0.0,0.0], #self._fsm_obj.orient_light_intensity,
+                "pan_light": self._fsm_obj.orient_light_intensity,
                 "payl_light": self._fsm_obj.payload_light_intensity
             }
             # Add best direction
