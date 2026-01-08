@@ -176,6 +176,7 @@ face0_sensor = None
 face1_sensor = None
 face2_sensor = None
 face3_sensor = None
+face4_sensor = None
 try:
     face0_sensor = VEML6031x00Manager(logger, tca[0])
     light_sensors.append(face0_sensor)
@@ -227,6 +228,13 @@ except:
 # CDH
 cdh = CommandDataHandler(logger, config, uhf_packet_manager, jokes_config)
 
+# DM OBJ
+dm_obj = DataProcess(
+        magnetometer=magnetometer, imu=imu, battery_power_monitor=battery_power_monitor
+    )
+
+dm_obj.running = True
+dm_obj.start_run_all_data()
 
 # ----- Test Functions ----- #
 def test_dm_obj_initialization():
@@ -345,6 +353,31 @@ async def test_dm_obj_get_data_updates():
     except Exception as e:
         print("\033[91mFAILED\033[0m [test_dm_obj_get_data_updates Exception]", e)
 
+async def test_dm_values():
+    dm_obj = DataProcess(
+        magnetometer=magnetometer, imu=imu, battery_power_monitor=battery_power_monitor
+    )
+    dm_obj.running = True
+    dm_obj.start_run_all_data()
+    while True:
+        await asyncio.sleep(1)
+        print("batt_volt:", dm_obj.data["data_batt_volt"])
+        print("imu av:", dm_obj.data["data_imu_av"])
+        print("imu_av_magnitude:", dm_obj.data["data_imu_av_magnitude"])
+        print("imu_acc:", dm_obj.data["data_imu_acc"])
+        print("magnetometer_vector:", dm_obj.data["data_magnetometer_vector"])
+        if face0_sensor:
+            print("light sensor face 0:", face0_sensor.get_light()._value)
+        if face1_sensor:
+            print("light sensor face 1:", face1_sensor.get_light()._value)
+        if face2_sensor:
+            print("light sensor face 2:", face2_sensor.get_light()._value)
+        if face3_sensor:
+            print("light sensor face 3:", face3_sensor.get_light()._value)
+        if face4_sensor:
+            print("light sensor face 4:", face4_sensor.get_light()._value)
+
+
 # ========== MAIN FUNCTION ========== #
 def test_all():
     # ========== DM_OBJ TESTS ========== #
@@ -356,6 +389,4 @@ def test_all():
     asyncio.run(test_dm_obj_battery())               # TESTED
     pass
 
-while True:
-    time.sleep(1)
-    test_all()
+asyncio.run(test_dm_values())
