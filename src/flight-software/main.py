@@ -78,6 +78,7 @@ except Exception as e:
         sleep_if_yet_deployed_count = 1
         sleep_if_yet_booted_count = 3
         critical_battery_voltage = 6.6
+        degraded_battery_voltage = 7.0
         fsm_batt_threshold_deploy = 7.0
         fsm_batt_threshold_orient = 6.8
         longest_allowable_sleep_time = 600
@@ -87,6 +88,10 @@ except Exception as e:
         detumble_max_time = 90.0
         detumble_stabilize_threshold = 0.2
         detumble_adjust_frequency = 2.0
+        detumble_enable_x = True
+        detumble_enable_y = True
+        detumble_enable_z = True
+        enable_detumble = True
         orient_light_threshold = 10.0
         orient_payload_setting = 1
         orient_payload_periodic_time = 25.0
@@ -99,6 +104,7 @@ except Exception as e:
             license = "WP2XZJ"
             transmit_frequency = 437.4
             modulation = "LoRa"
+            start_time = 80000
 
             class lora:
                 spreading_factor = 8
