@@ -234,20 +234,34 @@ class Beacon:
         state["name"] = self._name
 
         if self._fsm_obj is not None:
+            # Add data from FSM
             state["FSM"] = {
-                "fsm_current_state": str(self._fsm_obj.curr_state_name),
-                "fsm_deployed": str(self._fsm_obj.deployed),
-                "fsm_orient_payload_setting": str(
-                    self._fsm_obj.config.orient_payload_setting
-                ),
-                "fsm_orient_best_direction": str(self._fsm_obj.orient_best_direction),
-                "fsm_orient_light_intensity": str(self._fsm_obj.orient_light_intensity),
-                "fsm_orient_payload_light_intensity": str(
-                    self._fsm_obj.payload_light_intensity
-                ),
+                "state": str(self._fsm_obj.curr_state_name),
+                "depl": bool(self._fsm_obj.deployed),
+                "pay_set": self._fsm_obj.config.orient_payload_setting,
+                "pan_light": [0.0,0.0,0.0,0.0], #self._fsm_obj.orient_light_intensity,
+                "payl_light": self._fsm_obj.payload_light_intensity
             }
+            # Add best direction
+            if self._fsm_obj.orient_best_direction == "None Better That Others":  
+                state["FSM"]["best_dir"] = -1
+            else:
+                state["FSM"]["best_dir"] = self._fsm_obj.orient_best_direction
+            # Add other data items
             for key, value in self._fsm_obj.dp_obj.data.items():
-                state["FSM"][str(key)] = str(value)
+                if key == "data_magnetometer_vector":
+                    key = "magn_v"
+                elif key == "data_magnetometer_magnitude":
+                    continue # skip
+                elif key == "data_imu_av_magnitude":
+                    continue # skip
+                elif key == "data_imu_av":
+                    key = "av"
+                elif key == "data_imu_acc":
+                    key = "acc"
+                elif key == "data_batt_volt":
+                    key = "batt_v"
+                state["FSM"][str(key)] = value
         else:
             state["FSM"] = {}
 
