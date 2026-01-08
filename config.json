@@ -13,6 +13,7 @@
   "detumble_enable_x": true,
   "detumble_enable_y": true,
   "detumble_enable_z": true,
+  "enable_detumble": true,
   "detumble_gain": 1.0,
   "detumble_max_time": 90.0,
   "detumble_stabilize_threshold": 0.2,

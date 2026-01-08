@@ -211,33 +211,33 @@ class StateOrient:
                     await asyncio.sleep(2)
 
                     if self.best_direction == 0:
-                        self.logger.info("Activating +X spring")
+                        self.logger.info("Activating +Y spring")
                         self.rx0.value = False
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = True
-                        self.orient_best_direction = "+X Axis"
+                        self.orient_best_direction = "+Y Axis"
                     elif self.best_direction == 1:
-                        self.logger.info("Activating +Y spring")
+                        self.logger.info("Activating -X spring")
                         self.rx0.value = False
                         self.rx1.value = True
                         self.tx0.value = False
                         self.tx1.value = False
-                        self.orient_best_direction = "+Y Axis"
+                        self.orient_best_direction = "-X Axis"
                     elif self.best_direction == 2:
-                        self.logger.info("Activating -X spring")
+                        self.logger.info("Activating -Y spring")
                         self.rx0.value = False
                         self.rx1.value = False
                         self.tx0.value = True
                         self.tx1.value = False
-                        self.orient_best_direction = "-X Axis"
+                        self.orient_best_direction = "-Y Axis"
                     elif self.best_direction == 3:
-                        self.logger.info("Activating -Y spring")
+                        self.logger.info("Activating +X spring")
                         self.rx0.value = True
                         self.rx1.value = False
                         self.tx0.value = False
                         self.tx1.value = False
-                        self.orient_best_direction = "-Y Axis"
+                        self.orient_best_direction = "+X Axis"
 
                     # enforce max on-time
                     await asyncio.sleep(self.config.orient_heat_duration)

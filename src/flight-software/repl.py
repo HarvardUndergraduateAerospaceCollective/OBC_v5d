@@ -217,10 +217,10 @@ detumbler_manager = DetumblerManager(gain=1.0)
 try:
     magnetorquer_manager = MagnetorquerManager( logger=logger,
                                             i2c_addr        =0x5a,
-                                            addr_x_plus     =tca[0],
-                                            addr_x_minus    =tca[2],
-                                            addr_y_plus     =tca[1],
-                                            addr_y_minus    =tca[3],
+                                            addr_x_plus     =tca[3],
+                                            addr_x_minus    =tca[1],
+                                            addr_y_plus     =tca[0],
+                                            addr_y_minus    =tca[2],
                                             addr_z_minus    =tca[4])
 except:
     magnetorquer_manager = None

@@ -137,6 +137,7 @@ class Config:
         self.sleep_if_yet_booted_count = json_data["sleep_if_yet_booted_count"]
         self.sleep_if_yet_deployed_count = json_data["sleep_if_yet_deployed_count"]
         self.cdh_listen_command_timeout = json_data["cdh_listen_command_timeout"]
+        self.enable_detumble = json_data["enable_detumble"]
 
         self.CONFIG_SCHEMA = {
             "cubesat_name": {"type": str, "min_length": 1, "max_length": 10},
@@ -175,6 +176,7 @@ class Config:
             "sleep_if_yet_booted_count": {"type": int},
             "sleep_if_yet_deployed_count": {"type": int},
             "cdh_listen_command_timeout": {"type": int},
+            "enable_detumble": {"type": bool},
         }
 
     # validates values from input

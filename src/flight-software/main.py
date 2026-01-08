@@ -404,15 +404,13 @@ async def main_async_loop():
             detumbler_manager = None
             logger.debug(f"[WARNING] DetumblerManager Failed to initialize: {e}")
         try:
-            magnetorquer_manager = MagnetorquerManager(
-                logger=logger,
-                i2c_addr=0x5A,
-                addr_x_plus=tca[0],
-                addr_x_minus=tca[2],
-                addr_y_plus=tca[1],
-                addr_y_minus=tca[3],
-                addr_z_minus=tca[4],
-            )
+            magnetorquer_manager = MagnetorquerManager( logger=logger,
+                                        i2c_addr        =0x5a,
+                                        addr_x_plus     =tca[3],
+                                        addr_x_minus    =tca[1],
+                                        addr_y_plus     =tca[0],
+                                        addr_y_minus    =tca[2],
+                                        addr_z_minus    =tca[4])
         except Exception as e:
             magnetorquer_manager = None
             logger.debug(f"[WARNING] MagnetorquerManager Failed to initialize: {e}")

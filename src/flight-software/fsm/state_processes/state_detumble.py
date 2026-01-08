@@ -12,7 +12,8 @@ from lib.pysquared.hardware.magnetorquer.manager.magnetorquer import Magnetorque
 # ++++++++++++++ Functions: Helper ++++++++++++++ #
 class StateDetumble:
     def __init__(
-        self, dp_obj, logger, config, tca, magnetorquer_manager, detumbler_manager
+        self, dp_obj, logger, config, tca, magnetorquer_manager, detumbler_manager,
+        enable_detumble
     ):
         """
         Initialize the class object
@@ -25,6 +26,7 @@ class StateDetumble:
         self.start_time = None
         self.magnetorquer_manager: MagnetorquerManager | None = magnetorquer_manager
         self.detumbler_manager: DetumblerManager | None = detumbler_manager
+        self.enable_detumble = enable_detumble
 
     async def run(self):
         """
@@ -37,6 +39,12 @@ class StateDetumble:
         self.start_time = time.monotonic()
 
         while self.running:
+            if not self.enable_detumble:
+                self.logger.info(
+                    f"[FSM: Detumble] Detumble is set to not be enabled, skipping."
+                )
+                self.done = True
+                break
             # stop the dipole from the previous run, if there was one
             if self.magnetorquer_manager:
                 self.magnetorquer_manager.stop_dipole_moments()
