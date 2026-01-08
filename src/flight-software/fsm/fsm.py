@@ -39,11 +39,12 @@ class FSM:
         self.config = config
         self.deployment_switch = deployment_switch
         self.PAYLOAD_BATT_ENABLE = PAYLOAD_BATT_ENABLE
+        self.enable_detumble = self.config.enable_detumble
 
         self.state_objects = {
             "bootup": StateBootup(dp_obj, logger),
             "detumble": StateDetumble(
-                dp_obj, logger, config, tca, magnetorquer_manager, detumbler_manager
+                dp_obj, logger, config, tca, magnetorquer_manager, detumbler_manager, self.enable_detumble
             ),
             "deploy": StateDeploy(dp_obj, logger, config, deployment_switch),
             "orient": StateOrient(
@@ -128,6 +129,7 @@ class FSM:
         if (
             self.curr_state_name not in ("bootup", "detumble")
             and self.dp_obj.data["data_imu_av_magnitude"] is not None
+            and self.enable_detumble
             and self.dp_obj.data["data_imu_av_magnitude"]
             > self.config.detumble_stabilize_threshold * 1.5
         ):  # some added-buffer to not trigger this too much, only in emergency

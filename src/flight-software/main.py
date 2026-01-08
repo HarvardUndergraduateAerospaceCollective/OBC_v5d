@@ -231,6 +231,13 @@ async def main_async_loop():
         FACE2_ENABLE = mcp.get_pin(11)
         FACE3_ENABLE = mcp.get_pin(12)
 
+        # Set face enable pins to output mode
+        FACE4_ENABLE.direction = digitalio.Direction.OUTPUT
+        FACE0_ENABLE.direction = digitalio.Direction.OUTPUT
+        FACE1_ENABLE.direction = digitalio.Direction.OUTPUT
+        FACE2_ENABLE.direction = digitalio.Direction.OUTPUT
+        FACE3_ENABLE.direction = digitalio.Direction.OUTPUT
+
         # GPA
         PAYLOAD_BATT_ENABLE = mcp.get_pin(3)
         PAYLOAD_BATT_ENABLE.direction = digitalio.Direction.OUTPUT
@@ -390,7 +397,7 @@ async def main_async_loop():
             logger.debug(f"[WARNING] Light sensor 3 failed to initialize {e}")
             light_sensors.append(None)
         try:
-            face4_sensor = VEML6031x00Manager(logger, tca[4])
+            face4_sensor = VEML6031x00Manager(logger, tca[5])
             light_sensors.append(face4_sensor)
         except Exception as e:
             logger.debug(f"[WARNING] Light sensor 4 failed to initialize {e}")
@@ -407,11 +414,11 @@ async def main_async_loop():
             magnetorquer_manager = MagnetorquerManager(
                 logger=logger,
                 i2c_addr=0x5A,
-                addr_x_plus=tca[0],
-                addr_x_minus=tca[2],
-                addr_y_plus=tca[1],
-                addr_y_minus=tca[3],
-                addr_z_minus=tca[4],
+                addr_x_plus=tca[3],
+                addr_x_minus=tca[1],
+                addr_y_plus=tca[0],
+                addr_y_minus=tca[2],
+                addr_z_minus=tca[5],
             )
         except Exception as e:
             magnetorquer_manager = None
